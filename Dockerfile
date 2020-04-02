@@ -25,7 +25,7 @@ RUN adduser --disabled-password \
 
 USER ${NB_USER}
 
-RUN python3 -m pip install msticpy==${MSTICPY_VERSION}
+RUN python3 -m pip install msticpy==${MSTICPY_VERSION} --user
 
 COPY docs/content ${HOME}/content
 
