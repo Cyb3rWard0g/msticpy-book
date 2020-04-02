@@ -22,8 +22,8 @@ email: choldgraf@berkeley.edu
 description: >-
   Jupyter Book implementation of MSTICPY Docs.
 
-baseurl: /msticpy-book  # the subpath of your site, e.g. /blog. If there is no subpath for your site, use an empty string ""
-url: https://Cyb3rWard0g.github.io # the base hostname & protocol for your site, e.g. http://example.com
+baseurl: /msticpy-book/  # the subpath of your site, e.g. /blog. If there is no subpath for your site, use an empty string ""
+url: https://cyb3rward0g.github.io # the base hostname & protocol for your site, e.g. http://example.com
 
 
 #######################################################################################
