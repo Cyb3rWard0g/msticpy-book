@@ -1,0 +1,1592 @@
+---
+redirect_from:
+  - "/notebooks/geoiplookups"
+interact_link: content/notebooks/GeoIPLookups.ipynb
+kernel_name: conda-env-condadev-py
+kernel_path: content/notebooks
+has_widgets: false
+title: |-
+  Title: msticpy - GeoIP Lookup
+pagenum: 12
+prev_page:
+  url: /notebooks/FoliumMap.html
+next_page:
+  url: /notebooks/IoCExtract.html
+suffix: .ipynb
+search: ipaddress lookup none ipstack contents geoip maxmind class str float ip dataframe entity returns geolocation database service tuple msticpy addresses signature docstring results tier ipaddrlist iterable ipentity arguments default list request data lookupip location single entities api key column free information paid check nbtools entityschema keyword same method pandas destination com uses local download detailed details not false update new input distances iplocation abc address collection dict raw bulklookup raises gt source distance module classes allow geolite created available need offers updated greater accuracy please site also custom containing city dir user set true age days override tiers higher throughput
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">Title: msticpy - GeoIP Lookup</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Introduction">Introduction<a class="anchor-link" href="#Introduction"> </a></h2><p>This module contains two classes that allow you to look up the Geolocation of IP Addresses.</p>
+<h3 id="MaxMind-GeoIPLite">MaxMind GeoIPLite<a class="anchor-link" href="#MaxMind-GeoIPLite"> </a></h3><p>This product includes GeoLite2 data created by MaxMind, available from
+<a>https://www.maxmind.com</a>.</p>
+<p>This uses a local database which is downloaded first time when class object is instantiated. It gives very fast lookups but you need to download updates regularly. Maxmind offers a free tier of this database, updated monthly. For greater accuracy and more detailed information they have varying levels of paid service. Please check out their site for more details.</p>
+<p>The geoip module uses official maxmind pypi package - geoip2 and also has options to customize the behavior of local maxmind database.</p>
+<ul>
+<li><code>db_folder</code> : Specify custom path containing local maxmind city database. If not specified, download to .msticpy dir under user`s home dir.</li>
+<li><code>force_update</code> : can be set to True/False to issue force update despite of age check.</li>
+<li>Check age of maxmind city database based on database info and download new if it is not updated in last 30 days.</li>
+<li>``auto_update``` : can be set to True/False Allow option to override auto update database if user is desired not to update database older than 30 days.</li>
+</ul>
+<h3 id="IPStack">IPStack<a class="anchor-link" href="#IPStack"> </a></h3><p>This library uses services provided by ipstack.
+<a>https://ipstack.com</a></p>
+<p>IPStack is an online service and also offers a free tier of their service. Again, the paid tiers offer greater accuracy, more detailed information and higher throughput. Please check out their site for more details.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a></p>
+<h2 id="Table-of-Contents">Table of Contents<a class="anchor-link" href="#Table-of-Contents"> </a></h2><ul>
+<li><a href="#geoip_lookups">Maxmind GeoIP Lookup</a></li>
+<li><a href="#ipstack_lookups">IPStack GeoIP Lookup</a></li>
+<li><a href="#dataframe_input">Dataframe input</a></li>
+<li><a href="#custom_lookup">Creating your own GeoIP Class</a></li>
+<li><a href="#calc_distance">Calculating Geographical Distances</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Imports</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">MIN_REQ_PYTHON</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Check the Kernel-&gt;Change Kernel menu and ensure that Python 3.6&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;or later is selected as the active kernel.&#39;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Python </span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2"> or later is required.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">)</span>
+
+
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">import</span> <span class="nn">msticpy.sectools</span> <span class="k">as</span> <span class="nn">sectools</span>
+<span class="kn">from</span> <span class="nn">msticpy.nbtools</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">msticpy.nbtools.entityschema</span> <span class="kn">import</span> <span class="n">IpAddress</span><span class="p">,</span> <span class="n">GeoLocation</span>
+<span class="kn">from</span> <span class="nn">msticpy.sectools.geoip</span> <span class="kn">import</span> <span class="n">GeoLiteLookup</span><span class="p">,</span> <span class="n">IPStackLookup</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h2 id="Maxmind-GeoIP-Lite-Lookup-Class">Maxmind GeoIP Lite Lookup Class<a class="anchor-link" href="#Maxmind-GeoIP-Lite-Lookup-Class"> </a></h2><p>Signature:</p>
+
+<pre><code>iplocation.lookup_ip(ip_address: str = None, 
+                     ip_addr_list: collections.abc.Iterable = None,
+                     ip_entity: msticpy.nbtools.entityschema.IpAddress = None)
+Docstring:
+Lookup IP location from GeoLite2 data created by MaxMind.
+
+Keyword Arguments:
+    ip_address {str} -- a single address to look up (default: {None})
+    ip_addr_list {Iterable} -- a collection of addresses to lookup (default: {None})
+    ip_entity {IpAddress} -- an IpAddress entity
+
+Returns:
+    tuple(list{dict}, list{entity}) -- returns raw geolocation results and
+        same results as IP/Geolocation entities</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">iplocation</span> <span class="o">=</span> <span class="n">GeoLiteLookup</span><span class="p">()</span>
+<span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entity</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw result&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entity&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Raw result
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[{&#39;continent&#39;: {&#39;code&#39;: &#39;EU&#39;,
+   &#39;geoname_id&#39;: 6255148,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Europa&#39;,
+    &#39;en&#39;: &#39;Europe&#39;,
+    &#39;es&#39;: &#39;Europa&#39;,
+    &#39;fr&#39;: &#39;Europe&#39;,
+    &#39;ja&#39;: &#39;ヨーロッパ&#39;,
+    &#39;pt-BR&#39;: &#39;Europa&#39;,
+    &#39;ru&#39;: &#39;Европа&#39;,
+    &#39;zh-CN&#39;: &#39;欧洲&#39;}},
+  &#39;country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;location&#39;: {&#39;accuracy_radius&#39;: 1000,
+   &#39;latitude&#39;: 55.7386,
+   &#39;longitude&#39;: 37.6068,
+   &#39;time_zone&#39;: &#39;Europe/Moscow&#39;},
+  &#39;registered_country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;traits&#39;: {&#39;ip_address&#39;: &#39;90.156.201.97&#39;}}]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entity
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>IpAddress(Type=ipaddress, Address=90.156.201.97, Location={ &#39;AdditionalData&#39;: {},
+  &#39;Count...)</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="n">tmp_folder</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">gettempdir</span><span class="p">()</span>
+<span class="n">iplocation</span> <span class="o">=</span> <span class="n">GeoLiteLookup</span><span class="p">(</span><span class="n">db_folder</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">tmp_folder</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s1">&#39;geolite&#39;</span><span class="p">)))</span>
+<span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entity</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw result&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entity&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Raw result
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[{&#39;continent&#39;: {&#39;code&#39;: &#39;EU&#39;,
+   &#39;geoname_id&#39;: 6255148,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Europa&#39;,
+    &#39;en&#39;: &#39;Europe&#39;,
+    &#39;es&#39;: &#39;Europa&#39;,
+    &#39;fr&#39;: &#39;Europe&#39;,
+    &#39;ja&#39;: &#39;ヨーロッパ&#39;,
+    &#39;pt-BR&#39;: &#39;Europa&#39;,
+    &#39;ru&#39;: &#39;Европа&#39;,
+    &#39;zh-CN&#39;: &#39;欧洲&#39;}},
+  &#39;country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;location&#39;: {&#39;accuracy_radius&#39;: 1000,
+   &#39;latitude&#39;: 55.7386,
+   &#39;longitude&#39;: 37.6068,
+   &#39;time_zone&#39;: &#39;Europe/Moscow&#39;},
+  &#39;registered_country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;traits&#39;: {&#39;ip_address&#39;: &#39;90.156.201.97&#39;}}]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entity
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>IpAddress(Type=ipaddress, Address=90.156.201.97, Location={ &#39;AdditionalData&#39;: {},
+  &#39;Count...)</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">iplocation</span> <span class="o">=</span> <span class="n">GeoLiteLookup</span><span class="p">(</span><span class="n">force_update</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entity</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw result&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entity&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>force_update is set to True. Attempting to download new database to C:\Users\ianhelle\.msticpy\GeoLite2
+Downloading and extracting GeoLite DB archive from MaxMind....
+Extraction complete. Local Maxmind city DB: C:\Users\ianhelle\.msticpy\GeoLite2\GeoLite2-City.mmdb
+Raw result
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[{&#39;continent&#39;: {&#39;code&#39;: &#39;EU&#39;,
+   &#39;geoname_id&#39;: 6255148,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Europa&#39;,
+    &#39;en&#39;: &#39;Europe&#39;,
+    &#39;es&#39;: &#39;Europa&#39;,
+    &#39;fr&#39;: &#39;Europe&#39;,
+    &#39;ja&#39;: &#39;ヨーロッパ&#39;,
+    &#39;pt-BR&#39;: &#39;Europa&#39;,
+    &#39;ru&#39;: &#39;Европа&#39;,
+    &#39;zh-CN&#39;: &#39;欧洲&#39;}},
+  &#39;country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;location&#39;: {&#39;accuracy_radius&#39;: 1000,
+   &#39;latitude&#39;: 55.7386,
+   &#39;longitude&#39;: 37.6068,
+   &#39;time_zone&#39;: &#39;Europe/Moscow&#39;},
+  &#39;registered_country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;traits&#39;: {&#39;ip_address&#39;: &#39;90.156.201.97&#39;}}]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entity
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>IpAddress(Type=ipaddress, Address=90.156.201.97, Location={ &#39;AdditionalData&#39;: {},
+  &#39;Count...)</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">iplocation</span> <span class="o">=</span> <span class="n">GeoLiteLookup</span><span class="p">(</span><span class="n">auto_update</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entity</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw result&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entity&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Raw result
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[{&#39;continent&#39;: {&#39;code&#39;: &#39;EU&#39;,
+   &#39;geoname_id&#39;: 6255148,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Europa&#39;,
+    &#39;en&#39;: &#39;Europe&#39;,
+    &#39;es&#39;: &#39;Europa&#39;,
+    &#39;fr&#39;: &#39;Europe&#39;,
+    &#39;ja&#39;: &#39;ヨーロッパ&#39;,
+    &#39;pt-BR&#39;: &#39;Europa&#39;,
+    &#39;ru&#39;: &#39;Европа&#39;,
+    &#39;zh-CN&#39;: &#39;欧洲&#39;}},
+  &#39;country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;location&#39;: {&#39;accuracy_radius&#39;: 1000,
+   &#39;latitude&#39;: 55.7386,
+   &#39;longitude&#39;: 37.6068,
+   &#39;time_zone&#39;: &#39;Europe/Moscow&#39;},
+  &#39;registered_country&#39;: {&#39;geoname_id&#39;: 2017370,
+   &#39;iso_code&#39;: &#39;RU&#39;,
+   &#39;names&#39;: {&#39;de&#39;: &#39;Russland&#39;,
+    &#39;en&#39;: &#39;Russia&#39;,
+    &#39;es&#39;: &#39;Rusia&#39;,
+    &#39;fr&#39;: &#39;Russie&#39;,
+    &#39;ja&#39;: &#39;ロシア&#39;,
+    &#39;pt-BR&#39;: &#39;Rússia&#39;,
+    &#39;ru&#39;: &#39;Россия&#39;,
+    &#39;zh-CN&#39;: &#39;俄罗斯联邦&#39;}},
+  &#39;traits&#39;: {&#39;ip_address&#39;: &#39;90.156.201.97&#39;}}]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entity
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>IpAddress(Type=ipaddress, Address=90.156.201.97, Location={ &#39;AdditionalData&#39;: {},
+  &#39;Count...)</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">socket</span>
+<span class="n">socket_info</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getaddrinfo</span><span class="p">(</span><span class="s2">&quot;pypi.org&quot;</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">ips</span> <span class="o">=</span> <span class="p">[</span><span class="n">res</span><span class="p">[</span><span class="mi">4</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">socket_info</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ips</span><span class="p">)</span>
+
+<span class="n">_</span><span class="p">,</span> <span class="n">ip_entities</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_addr_list</span><span class="o">=</span><span class="n">ips</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entities</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[&#39;2a04:4e42:200::223&#39;, &#39;2a04:4e42:600::223&#39;, &#39;2a04:4e42:400::223&#39;, &#39;2a04:4e42::223&#39;, &#39;151.101.192.223&#39;, &#39;151.101.128.223&#39;, &#39;151.101.64.223&#39;, &#39;151.101.0.223&#39;]
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[IpAddress(Type=ipaddress, Address=2a04:4e42:200::223, Location={&#39;AdditionalData&#39;: {}, &#39;Lat...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:600::223, Location={&#39;AdditionalData&#39;: {}, &#39;Lat...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:400::223, Location={&#39;AdditionalData&#39;: {}, &#39;Lat...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42::223, Location={&#39;AdditionalData&#39;: {}, &#39;Latitud...),
+ IpAddress(Type=ipaddress, Address=151.101.192.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cou...),
+ IpAddress(Type=ipaddress, Address=151.101.128.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cou...),
+ IpAddress(Type=ipaddress, Address=151.101.64.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Coun...),
+ IpAddress(Type=ipaddress, Address=151.101.0.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Count...)]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h2 id="IPStack-Geo-lookup-Class">IPStack Geo-lookup Class<a class="anchor-link" href="#IPStack-Geo-lookup-Class"> </a></h2><h4 id="Class-Initialization">Class Initialization<a class="anchor-link" href="#Class-Initialization"> </a></h4><p>Note - requires IPStack API Key, Optional parameter bulk_lookup allows multiple IPs in a single request. This is only available with the paid Professional tier and above.</p>
+
+<pre><code>Init signature: IPStackLookup(api_key: str, bulk_lookup: bool = False)
+Docstring:     
+GeoIP Lookup using IPStack web service.
+
+Raises:
+    ConnectionError -- Invalid status returned from http request
+    PermissionError -- Service refused request (e.g. requesting batch of addresses
+            on free tier API key)
+Init docstring:
+Create a new instance of IPStackLookup.
+
+Arguments:
+    api_key {str} -- API Key from IPStack - see https://ipstack.com
+    bulk_lookup {bool} -- For Professional and above tiers allowing you to
+        submit multiple IPs in a single request.</code></pre>
+<h4 id="lookup_ip-method">lookup_ip method<a class="anchor-link" href="#lookup_ip-method"> </a></h4>
+<pre><code>Signature:
+iplocation.lookup_ip(
+    ['ip_address: str = None', 'ip_addr_list: collections.abc.Iterable = None', 'ip_entity: msticpy.nbtools.entityschema.IpAddress = None'],
+) -&gt; tuple
+Docstring:
+Lookup IP location from IPStack web service.
+
+Keyword Arguments:
+    ip_address {str} -- a single address to look up (default: {None})
+    ip_addr_list {Iterable} -- a collection of addresses to lookup (default: {None})
+    ip_entity {IpAddress} -- an IpAddress entity
+
+Raises:
+    ConnectionError -- Invalid status returned from http request
+    PermissionError -- Service refused request (e.g. requesting batch of addresses
+        on free tier API key)
+
+Returns:
+    tuple(list{dict}, list{entity}) -- returns raw geolocation results and
+        same results as IP/Geolocation entities</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h3 id="You-will-need-a-IPStack-API-key">You will need a IPStack API key<a class="anchor-link" href="#You-will-need-a-IPStack-API-key"> </a></h3><p>You will get more detailed results and a higher throughput allowance if you have a paid tier. See IPStack website for more details</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">iplocation</span> <span class="o">=</span> <span class="n">IPStackLookup</span><span class="p">()</span>
+<span class="c1"># Enter your IPStack Key here (if not set in msticpyconfig.yaml)</span>
+<span class="n">ips_key</span> <span class="o">=</span> <span class="n">nbwidgets</span><span class="o">.</span><span class="n">GetEnvironmentKey</span><span class="p">(</span><span class="n">env_var</span><span class="o">=</span><span class="s1">&#39;IPSTACK_AUTH&#39;</span><span class="p">,</span>
+                           <span class="n">help_str</span><span class="o">=</span><span class="s1">&#39;To obtain an API key sign up here https://www.ipstack.com/&#39;</span><span class="p">,</span>
+                           <span class="n">prompt</span><span class="o">=</span><span class="s1">&#39;IPStack API key:&#39;</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AuthKey&quot;</span><span class="p">):</span>
+    <span class="n">ips_key</span><span class="o">.</span><span class="n">display</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This library uses services provided by ipstack.
+<a href="https://ipstack.com">https://ipstack.com</a>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="c0e09113-60a2-4cca-80ff-f8aed0c0538a"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#c0e09113-60a2-4cca-80ff-f8aed0c0538a');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "3501f703af164920ab30326a33f59356", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AuthKey&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ips_key</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No Authentication key in config/environment or supplied by user.&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">ips_key</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+    <span class="n">iplocation</span> <span class="o">=</span> <span class="n">IPStackLookup</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">ips_key</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+<span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entity</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw result&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entity&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Raw result
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[({&#39;ip&#39;: &#39;90.156.201.97&#39;,
+   &#39;type&#39;: &#39;ipv4&#39;,
+   &#39;continent_code&#39;: &#39;AS&#39;,
+   &#39;continent_name&#39;: &#39;Asia&#39;,
+   &#39;country_code&#39;: &#39;RU&#39;,
+   &#39;country_name&#39;: &#39;Russia&#39;,
+   &#39;region_code&#39;: &#39;MOW&#39;,
+   &#39;region_name&#39;: &#39;Moscow&#39;,
+   &#39;city&#39;: &#39;Moscow&#39;,
+   &#39;zip&#39;: &#39;115088&#39;,
+   &#39;latitude&#39;: 55.712608337402344,
+   &#39;longitude&#39;: 37.68056869506836,
+   &#39;location&#39;: {&#39;geoname_id&#39;: 524901,
+    &#39;capital&#39;: &#39;Moscow&#39;,
+    &#39;languages&#39;: [{&#39;code&#39;: &#39;ru&#39;, &#39;name&#39;: &#39;Russian&#39;, &#39;native&#39;: &#39;Русский&#39;}],
+    &#39;country_flag&#39;: &#39;http://assets.ipstack.com/flags/ru.svg&#39;,
+    &#39;country_flag_emoji&#39;: &#39;🇷🇺&#39;,
+    &#39;country_flag_emoji_unicode&#39;: &#39;U+1F1F7 U+1F1FA&#39;,
+    &#39;calling_code&#39;: &#39;7&#39;,
+    &#39;is_eu&#39;: False}},
+  200)]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entity
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>IpAddress(Type=ipaddress, Address=90.156.201.97, Location={ &#39;AdditionalData&#39;: {},
+  &#39;City&#39;...)</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">loc_result</span><span class="p">,</span> <span class="n">ip_entities</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_addr_list</span><span class="o">=</span><span class="n">ips</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Raw results&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">loc_result</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IP Address Entities&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">ip_entities</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Raw results
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[({&#39;ip&#39;: &#39;2a04:4e42:200::223&#39;,
+   &#39;type&#39;: &#39;ipv6&#39;,
+   &#39;continent_code&#39;: None,
+   &#39;continent_name&#39;: None,
+   &#39;country_code&#39;: None,
+   &#39;country_name&#39;: None,
+   &#39;region_code&#39;: None,
+   &#39;region_name&#39;: None,
+   &#39;city&#39;: None,
+   &#39;zip&#39;: None,
+   &#39;latitude&#39;: None,
+   &#39;longitude&#39;: None,
+   &#39;location&#39;: {&#39;geoname_id&#39;: None,
+    &#39;capital&#39;: None,
+    &#39;languages&#39;: None,
+    &#39;country_flag&#39;: None,
+    &#39;country_flag_emoji&#39;: None,
+    &#39;country_flag_emoji_unicode&#39;: None,
+    &#39;calling_code&#39;: None,
+    &#39;is_eu&#39;: None}},
+  200),
+ ({&#39;ip&#39;: &#39;2a04:4e42:600::223&#39;,
+   &#39;type&#39;: &#39;ipv6&#39;,
+   &#39;continent_code&#39;: None,
+   &#39;continent_name&#39;: None,
+   &#39;country_code&#39;: None,
+   &#39;country_name&#39;: None,
+   &#39;region_code&#39;: None,
+   &#39;region_name&#39;: None,
+   &#39;city&#39;: None,
+   &#39;zip&#39;: None,
+   &#39;latitude&#39;: None,
+   &#39;longitude&#39;: None,
+   &#39;location&#39;: {&#39;geoname_id&#39;: None,
+    &#39;capital&#39;: None,
+    &#39;languages&#39;: None,
+    &#39;country_flag&#39;: None,
+    &#39;country_flag_emoji&#39;: None,
+    &#39;country_flag_emoji_unicode&#39;: None,
+    &#39;calling_code&#39;: None,
+    &#39;is_eu&#39;: None}},
+  200),
+ ({&#39;ip&#39;: &#39;2a04:4e42:400::223&#39;,
+   &#39;type&#39;: &#39;ipv6&#39;,
+   &#39;continent_code&#39;: None,
+   &#39;continent_name&#39;: None,
+   &#39;country_code&#39;: None,
+   &#39;country_name&#39;: None,
+   &#39;region_code&#39;: None,
+   &#39;region_name&#39;: None,
+   &#39;city&#39;: None,
+   &#39;zip&#39;: None,
+   &#39;latitude&#39;: None,
+   &#39;longitude&#39;: None,
+   &#39;location&#39;: {&#39;geoname_id&#39;: None,
+    &#39;capital&#39;: None,
+    &#39;languages&#39;: None,
+    &#39;country_flag&#39;: None,
+    &#39;country_flag_emoji&#39;: None,
+    &#39;country_flag_emoji_unicode&#39;: None,
+    &#39;calling_code&#39;: None,
+    &#39;is_eu&#39;: None}},
+  200),
+ ({&#39;ip&#39;: &#39;2a04:4e42::223&#39;,
+   &#39;type&#39;: &#39;ipv6&#39;,
+   &#39;continent_code&#39;: None,
+   &#39;continent_name&#39;: None,
+   &#39;country_code&#39;: None,
+   &#39;country_name&#39;: None,
+   &#39;region_code&#39;: None,
+   &#39;region_name&#39;: None,
+   &#39;city&#39;: None,
+   &#39;zip&#39;: None,
+   &#39;latitude&#39;: None,
+   &#39;longitude&#39;: None,
+   &#39;location&#39;: {&#39;geoname_id&#39;: None,
+    &#39;capital&#39;: None,
+    &#39;languages&#39;: None,
+    &#39;country_flag&#39;: None,
+    &#39;country_flag_emoji&#39;: None,
+    &#39;country_flag_emoji_unicode&#39;: None,
+    &#39;calling_code&#39;: None,
+    &#39;is_eu&#39;: None}},
+  200),
+ ({&#39;ip&#39;: &#39;151.101.192.223&#39;,
+   &#39;type&#39;: &#39;ipv4&#39;,
+   &#39;continent_code&#39;: &#39;NA&#39;,
+   &#39;continent_name&#39;: &#39;North America&#39;,
+   &#39;country_code&#39;: &#39;US&#39;,
+   &#39;country_name&#39;: &#39;United States&#39;,
+   &#39;region_code&#39;: &#39;CA&#39;,
+   &#39;region_name&#39;: &#39;California&#39;,
+   &#39;city&#39;: &#39;San Francisco&#39;,
+   &#39;zip&#39;: &#39;94107&#39;,
+   &#39;latitude&#39;: 37.76784896850586,
+   &#39;longitude&#39;: -122.39286041259766,
+   &#39;location&#39;: {&#39;geoname_id&#39;: 5391959,
+    &#39;capital&#39;: &#39;Washington D.C.&#39;,
+    &#39;languages&#39;: [{&#39;code&#39;: &#39;en&#39;, &#39;name&#39;: &#39;English&#39;, &#39;native&#39;: &#39;English&#39;}],
+    &#39;country_flag&#39;: &#39;http://assets.ipstack.com/flags/us.svg&#39;,
+    &#39;country_flag_emoji&#39;: &#39;🇺🇸&#39;,
+    &#39;country_flag_emoji_unicode&#39;: &#39;U+1F1FA U+1F1F8&#39;,
+    &#39;calling_code&#39;: &#39;1&#39;,
+    &#39;is_eu&#39;: False}},
+  200),
+ ({&#39;ip&#39;: &#39;151.101.128.223&#39;,
+   &#39;type&#39;: &#39;ipv4&#39;,
+   &#39;continent_code&#39;: &#39;NA&#39;,
+   &#39;continent_name&#39;: &#39;North America&#39;,
+   &#39;country_code&#39;: &#39;US&#39;,
+   &#39;country_name&#39;: &#39;United States&#39;,
+   &#39;region_code&#39;: &#39;CA&#39;,
+   &#39;region_name&#39;: &#39;California&#39;,
+   &#39;city&#39;: &#39;San Francisco&#39;,
+   &#39;zip&#39;: &#39;94107&#39;,
+   &#39;latitude&#39;: 37.76784896850586,
+   &#39;longitude&#39;: -122.39286041259766,
+   &#39;location&#39;: {&#39;geoname_id&#39;: 5391959,
+    &#39;capital&#39;: &#39;Washington D.C.&#39;,
+    &#39;languages&#39;: [{&#39;code&#39;: &#39;en&#39;, &#39;name&#39;: &#39;English&#39;, &#39;native&#39;: &#39;English&#39;}],
+    &#39;country_flag&#39;: &#39;http://assets.ipstack.com/flags/us.svg&#39;,
+    &#39;country_flag_emoji&#39;: &#39;🇺🇸&#39;,
+    &#39;country_flag_emoji_unicode&#39;: &#39;U+1F1FA U+1F1F8&#39;,
+    &#39;calling_code&#39;: &#39;1&#39;,
+    &#39;is_eu&#39;: False}},
+  200),
+ ({&#39;ip&#39;: &#39;151.101.64.223&#39;,
+   &#39;type&#39;: &#39;ipv4&#39;,
+   &#39;continent_code&#39;: &#39;NA&#39;,
+   &#39;continent_name&#39;: &#39;North America&#39;,
+   &#39;country_code&#39;: &#39;US&#39;,
+   &#39;country_name&#39;: &#39;United States&#39;,
+   &#39;region_code&#39;: &#39;CA&#39;,
+   &#39;region_name&#39;: &#39;California&#39;,
+   &#39;city&#39;: &#39;San Francisco&#39;,
+   &#39;zip&#39;: &#39;94107&#39;,
+   &#39;latitude&#39;: 37.76784896850586,
+   &#39;longitude&#39;: -122.39286041259766,
+   &#39;location&#39;: {&#39;geoname_id&#39;: 5391959,
+    &#39;capital&#39;: &#39;Washington D.C.&#39;,
+    &#39;languages&#39;: [{&#39;code&#39;: &#39;en&#39;, &#39;name&#39;: &#39;English&#39;, &#39;native&#39;: &#39;English&#39;}],
+    &#39;country_flag&#39;: &#39;http://assets.ipstack.com/flags/us.svg&#39;,
+    &#39;country_flag_emoji&#39;: &#39;🇺🇸&#39;,
+    &#39;country_flag_emoji_unicode&#39;: &#39;U+1F1FA U+1F1F8&#39;,
+    &#39;calling_code&#39;: &#39;1&#39;,
+    &#39;is_eu&#39;: False}},
+  200),
+ ({&#39;ip&#39;: &#39;151.101.0.223&#39;,
+   &#39;type&#39;: &#39;ipv4&#39;,
+   &#39;continent_code&#39;: &#39;NA&#39;,
+   &#39;continent_name&#39;: &#39;North America&#39;,
+   &#39;country_code&#39;: &#39;US&#39;,
+   &#39;country_name&#39;: &#39;United States&#39;,
+   &#39;region_code&#39;: &#39;CA&#39;,
+   &#39;region_name&#39;: &#39;California&#39;,
+   &#39;city&#39;: &#39;San Francisco&#39;,
+   &#39;zip&#39;: &#39;94107&#39;,
+   &#39;latitude&#39;: 37.76784896850586,
+   &#39;longitude&#39;: -122.39286041259766,
+   &#39;location&#39;: {&#39;geoname_id&#39;: 5391959,
+    &#39;capital&#39;: &#39;Washington D.C.&#39;,
+    &#39;languages&#39;: [{&#39;code&#39;: &#39;en&#39;, &#39;name&#39;: &#39;English&#39;, &#39;native&#39;: &#39;English&#39;}],
+    &#39;country_flag&#39;: &#39;http://assets.ipstack.com/flags/us.svg&#39;,
+    &#39;country_flag_emoji&#39;: &#39;🇺🇸&#39;,
+    &#39;country_flag_emoji_unicode&#39;: &#39;U+1F1FA U+1F1F8&#39;,
+    &#39;calling_code&#39;: &#39;1&#39;,
+    &#39;is_eu&#39;: False}},
+  200)]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IP Address Entities
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[IpAddress(Type=ipaddress, Address=2a04:4e42:200::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:600::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:400::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42::223, Location={&#39;AdditionalData&#39;: {}, &#39;Type&#39;: ...),
+ IpAddress(Type=ipaddress, Address=151.101.192.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cit...),
+ IpAddress(Type=ipaddress, Address=151.101.128.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cit...),
+ IpAddress(Type=ipaddress, Address=151.101.64.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;City...),
+ IpAddress(Type=ipaddress, Address=151.101.0.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;City&#39;...)]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h2 id="Taking-input-from-a-pandas-DataFrame">Taking input from a pandas DataFrame<a class="anchor-link" href="#Taking-input-from-a-pandas-DataFrame"> </a></h2><p>The base class for both implementations has a method that sources the ip addresses from a dataframe column and returns a new dataframe with the location information merged with the input frame</p>
+
+<pre><code>Signature: iplocation.df_lookup_ip(data: pandas.core.frame.DataFrame, column: str)
+Docstring:
+Lookup Geolocation data from a pandas Dataframe.
+
+Keyword Arguments:
+    data {pd.DataFrame} -- pandas dataframe containing IpAddress column
+    column {str} -- the name of the dataframe column to use as a source</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">netflow_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;data/az_net_flows.csv&quot;</span><span class="p">)</span>
+<span class="n">netflow_df</span> <span class="o">=</span> <span class="n">netflow_df</span><span class="p">[[</span><span class="s2">&quot;AllExtIPs&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+<span class="n">iplocation</span> <span class="o">=</span> <span class="n">GeoLiteLookup</span><span class="p">()</span>
+<span class="n">iplocation</span><span class="o">.</span><span class="n">df_lookup_ip</span><span class="p">(</span><span class="n">netflow_df</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="s2">&quot;AllExtIPs&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>AllExtIPs</th>
+      <th>AdditionalData</th>
+      <th>Type</th>
+      <th>CountryCode</th>
+      <th>CountryName</th>
+      <th>State</th>
+      <th>City</th>
+      <th>Longitude</th>
+      <th>Latitude</th>
+      <th>IpAddress</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>65.55.44.109</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Virginia</td>
+      <td>Boydton</td>
+      <td>-78.3750</td>
+      <td>36.6534</td>
+      <td>65.55.44.109</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>13.71.172.128</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>CA</td>
+      <td>Canada</td>
+      <td>Ontario</td>
+      <td>Toronto</td>
+      <td>-79.4195</td>
+      <td>43.6644</td>
+      <td>13.71.172.128</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>13.71.172.130</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>CA</td>
+      <td>Canada</td>
+      <td>Ontario</td>
+      <td>Toronto</td>
+      <td>-79.4195</td>
+      <td>43.6644</td>
+      <td>13.71.172.130</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>40.124.45.19</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Texas</td>
+      <td>San Antonio</td>
+      <td>-98.4935</td>
+      <td>29.4247</td>
+      <td>40.124.45.19</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>104.43.212.12</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Iowa</td>
+      <td>Des Moines</td>
+      <td>-93.6112</td>
+      <td>41.6006</td>
+      <td>104.43.212.12</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>20.41.41.23</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Virginia</td>
+      <td>Boydton</td>
+      <td>-78.3750</td>
+      <td>36.6534</td>
+      <td>20.41.41.23</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>52.179.17.38</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Virginia</td>
+      <td>Washington</td>
+      <td>-78.1539</td>
+      <td>38.7095</td>
+      <td>52.179.17.38</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>157.55.134.142</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Virginia</td>
+      <td>Washington</td>
+      <td>-78.1539</td>
+      <td>38.7095</td>
+      <td>157.55.134.142</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>172.217.15.110</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>-97.8220</td>
+      <td>37.7510</td>
+      <td>172.217.15.110</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>40.91.75.5</td>
+      <td>{}</td>
+      <td>geolocation</td>
+      <td>US</td>
+      <td>United States</td>
+      <td>Washington</td>
+      <td>None</td>
+      <td>-122.3314</td>
+      <td>47.6092</td>
+      <td>40.91.75.5</td>
+    </tr>
+  </tbody>
+</table>
+<p>87 rows × 10 columns</p>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">loc_df</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">df_lookup_ip</span><span class="p">(</span><span class="n">netflow_df</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="s2">&quot;AllExtIPs&quot;</span><span class="p">)</span>
+<span class="n">loc_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;data/ip_locs.csv&quot;</span><span class="p">)</span>
+
+<span class="n">loc2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;data/ip_locs.csv&quot;</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pickle</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;data/ip_entities.pkl&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">ip_entities</span><span class="p">,</span> <span class="n">fh</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;data/ip_entities.pkl&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+    <span class="n">ip_entities2</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+<span class="n">ip_entities2</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[IpAddress(Type=ipaddress, Address=2a04:4e42:200::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:600::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42:400::223, Location={&#39;AdditionalData&#39;: {}, &#39;Typ...),
+ IpAddress(Type=ipaddress, Address=2a04:4e42::223, Location={&#39;AdditionalData&#39;: {}, &#39;Type&#39;: ...),
+ IpAddress(Type=ipaddress, Address=151.101.192.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cit...),
+ IpAddress(Type=ipaddress, Address=151.101.128.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;Cit...),
+ IpAddress(Type=ipaddress, Address=151.101.64.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;City...),
+ IpAddress(Type=ipaddress, Address=151.101.0.223, Location={ &#39;AdditionalData&#39;: {},
+   &#39;City&#39;...)]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h2 id="Creating-a-Custom-GeopIP-Lookup-Class">Creating a Custom GeopIP Lookup Class<a class="anchor-link" href="#Creating-a-Custom-GeopIP-Lookup-Class"> </a></h2><p>You can derive a class that implements the same operations to use with a different GeoIP service.</p>
+<p>The class signature is as follows:</p>
+
+<pre><code>class GeoIpLookup(ABC):
+    """Abstract base class for GeoIP Lookup classes."""
+
+    @abstractmethod
+    def lookup_ip(self, ip_address: str = None, ip_addr_list: Iterable = None,
+                  ip_entity: IpAddress = None):
+        """
+        Lookup IP location.
+
+        Keyword Arguments:
+            ip_address {str} -- a single address to look up (default: {None})
+            ip_addr_list {Iterable} -- a collection of addresses to lookup (default: {None})
+            ip_entity {IpAddress} -- an IpAddress entity
+
+        Returns:
+            tuple(list{dict}, list{entity}) -- returns raw geolocation results and
+                same results as IP/Geolocation entities
+
+        """</code></pre>
+<p>You should override the lookup_ip method implementing your own method of geoip lookup.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a></a><a href="#contents">Contents</a></p>
+<h2 id="Calculating-Geographical-Distances">Calculating Geographical Distances<a class="anchor-link" href="#Calculating-Geographical-Distances"> </a></h2><p>Use the geo_distance function from msticpy.sectools.geoip to calculated distances between two locations.
+I am indebted to Martin Thoma who posted this solution (which I've modified slightly) on Stackoverflow.</p>
+
+<pre><code>Signature: geo_distance(origin: Tuple[float, float], destination: Tuple[float, float]) -&gt; float
+Docstring:
+Calculate the Haversine distance.
+
+Author: Martin Thoma - stackoverflow
+
+Parameters
+----------
+origin : tuple of float
+    (lat, long)
+destination : tuple of float
+    (lat, long)
+
+Returns
+-------
+distance_in_km : float</code></pre>
+<p>Or where you have source and destination IpAddress entities, you can use the wrapper entity_distance.</p>
+
+<pre><code>Signature:
+entity_distance(
+    ['ip_src: msticpy.nbtools.entityschema.IpAddress', 'ip_dest: msticpy.nbtools.entityschema.IpAddress'],
+) -&gt; float
+Docstring:
+Return distance between two IP Entities.
+
+Arguments:
+    ip_src {IpAddress} -- Source IpAddress Entity
+    ip_dest {IpAddress} -- Destination IpAddress Entity
+
+Raises:
+    AttributeError -- if either entity has no location information
+
+Returns:
+    float -- Distance in kilometers.</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">msticpy.sectools.geoip</span> <span class="kn">import</span> <span class="n">geo_distance</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">ip_entity1</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;90.156.201.97&#39;</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">ip_entity2</span> <span class="o">=</span> <span class="n">iplocation</span><span class="o">.</span><span class="n">lookup_ip</span><span class="p">(</span><span class="n">ip_address</span><span class="o">=</span><span class="s1">&#39;151.101.64.223&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">ip_entity1</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ip_entity2</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">dist</span> <span class="o">=</span> <span class="n">geo_distance</span><span class="p">(</span><span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="n">ip_entity1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">Latitude</span><span class="p">,</span> <span class="n">ip_entity1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">Longitude</span><span class="p">),</span>
+                    <span class="n">destination</span><span class="o">=</span><span class="p">(</span><span class="n">ip_entity2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">Latitude</span><span class="p">,</span> <span class="n">ip_entity2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">Longitude</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Distance between IP Locations = {round(dist, 1)}km&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{ &#39;AdditionalData&#39;: {},
+  &#39;Address&#39;: &#39;90.156.201.97&#39;,
+  &#39;Location&#39;: { &#39;AdditionalData&#39;: {},
+                &#39;CountryCode&#39;: &#39;RU&#39;,
+                &#39;CountryName&#39;: &#39;Russia&#39;,
+                &#39;Latitude&#39;: 55.7386,
+                &#39;Longitude&#39;: 37.6068,
+                &#39;Type&#39;: &#39;geolocation&#39;},
+  &#39;Type&#39;: &#39;ipaddress&#39;}
+{ &#39;AdditionalData&#39;: {},
+  &#39;Address&#39;: &#39;151.101.64.223&#39;,
+  &#39;Location&#39;: { &#39;AdditionalData&#39;: {},
+                &#39;CountryCode&#39;: &#39;US&#39;,
+                &#39;CountryName&#39;: &#39;United States&#39;,
+                &#39;Latitude&#39;: 37.751,
+                &#39;Longitude&#39;: -97.822,
+                &#39;Type&#39;: &#39;geolocation&#39;},
+  &#39;Type&#39;: &#39;ipaddress&#39;}
+
+Distance between IP Locations = 8796.8km
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+ 
+
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {"1b99767e6d73444aacbb01f5a134c71e": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "CheckboxModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.4.0", "description": "Save as environment var", "description_tooltip": null, "disabled": false, "layout": "IPY_MODEL_29a7e85b29114becbfb3435d5525c786", "style": "IPY_MODEL_8a456c3501164860bc0d75fb481f626d", "value": true}}, "29a7e85b29114becbfb3435d5525c786": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.1.0", "model_name": "LayoutModel", "state": {"_model_module_version": "1.1.0", "_view_module_version": "1.1.0", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null}}, "37fa860786a44601a5150349b393c09a": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "ButtonStyleModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.1.0"}}, "4b27d9d66bc34d4b8d02ffab695e492a": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.1.0", "model_name": "LayoutModel", "state": {"_model_module_version": "1.1.0", "_view_module_version": "1.1.0", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "width": "50%"}}, "5858c82440554924816dafc3f673085a": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "DescriptionStyleModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.1.0", "description_width": "initial"}}, "6c4e34e70f4840c3aaacdbfc2561ec10": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.1.0", "model_name": "LayoutModel", "state": {"_model_module_version": "1.1.0", "_view_module_version": "1.1.0", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null, "width": "10%"}}, "801ddf2c744645cc99cc5c3de69c776a": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "HTMLModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.4.0", "description_tooltip": null, "layout": "IPY_MODEL_854cec0017a043658be01da816c8b3e0", "style": "IPY_MODEL_95f101497cdb4e60808376e83501fc8c", "value": "To obtain an API key sign up here https://www.ipstack.com/"}}, "854cec0017a043658be01da816c8b3e0": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.1.0", "model_name": "LayoutModel", "state": {"_model_module_version": "1.1.0", "_view_module_version": "1.1.0", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null}}, "8a456c3501164860bc0d75fb481f626d": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "DescriptionStyleModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.1.0", "description_width": ""}}, "95f101497cdb4e60808376e83501fc8c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "DescriptionStyleModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.1.0", "description_width": ""}}, "97f15bf50bef410382df24030c2d956c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "ButtonModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.4.0", "description": "Set", "layout": "IPY_MODEL_6c4e34e70f4840c3aaacdbfc2561ec10", "style": "IPY_MODEL_37fa860786a44601a5150349b393c09a"}}, "b0227b778eaa4c178774ee8b1933a197": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "HBoxModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.4.0", "children": ["IPY_MODEL_c527bfcb6a6a4ebe8bb4489035a5fe22", "IPY_MODEL_97f15bf50bef410382df24030c2d956c", "IPY_MODEL_1b99767e6d73444aacbb01f5a134c71e"], "layout": "IPY_MODEL_d255bf9198654d89b4a89456ce8e2c96"}}, "c527bfcb6a6a4ebe8bb4489035a5fe22": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.4.0", "model_name": "TextModel", "state": {"_model_module_version": "1.4.0", "_view_module_version": "1.4.0", "description": "IPStack API key:", "description_tooltip": null, "layout": "IPY_MODEL_4b27d9d66bc34d4b8d02ffab695e492a", "style": "IPY_MODEL_5858c82440554924816dafc3f673085a"}}, "d255bf9198654d89b4a89456ce8e2c96": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.1.0", "model_name": "LayoutModel", "state": {"_model_module_version": "1.1.0", "_view_module_version": "1.1.0", "grid_area": null, "grid_auto_columns": null, "grid_auto_flow": null, "grid_auto_rows": null, "grid_column": null, "grid_gap": null, "grid_row": null, "grid_template_areas": null, "grid_template_columns": null, "grid_template_rows": null}}}, "version_major": 2, "version_minor": 0}
+</script>
+
+
+    </main>
+    

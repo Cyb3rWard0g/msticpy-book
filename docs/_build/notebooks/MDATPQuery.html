@@ -1,0 +1,1466 @@
+---
+redirect_from:
+  - "/notebooks/mdatpquery"
+interact_link: content/notebooks/MDATPQuery.ipynb
+kernel_name: python3
+kernel_path: content/notebooks
+has_widgets: false
+title: |-
+  Querying MDATP Data
+pagenum: 14
+prev_page:
+  url: /notebooks/IoCExtract.html
+next_page:
+  url: /notebooks/NotebookWidgets.html
+suffix: .ipynb
+search: mdatp data details application queries query api authentication azure once execute msticpy connect advanced hunting via found microsoft app following client id directory provider parameters custom querying versions description notebook provides examples installation handled ad before authenticate need register provide required permissions supports context detailed instructions registering here docs com en us windows security threat protection defender atp exposed apis create webapp created require tenant secret portal under active registrations collected easiest manage msticpyconfig yaml simply add file format initialize connected connector functions similar manner connectors list get avaliable default print fully constructed debug purposes
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">Querying MDATP Data</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>MSTICpy versions &gt; 0.3.0</p>
+<h3 id="Description">Description<a class="anchor-link" href="#Description"> </a></h3><p>This Notebook provides details and examples of how to connect to and query data from the MDATP Advanced Hunting API.</p>
+<h3 id="Installation">Installation<a class="anchor-link" href="#Installation"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>pip install msticpy --user --upgrade
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Authentication">Authentication<a class="anchor-link" href="#Authentication"> </a></h3><p>Authentication for the MDATP Advanced Hunting API is handled via an Azure AD application. Before you can authenticate you will need to register an application and provide it with the required permissions. MSTICpy supports Application Context authentication to the API.
+Detailed instructions on registering an application can be found here: <a href="https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-atp/exposed-apis-create-app-webapp">https://docs.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-atp/exposed-apis-create-app-webapp</a></p>
+<p>Once created you will require the following details:</p>
+<ul>
+<li>Application (client) ID</li>
+<li>Directory (tenant) ID</li>
+<li>Client secret</li>
+</ul>
+<p>These details can be found in the Azure Portal under Azure Active Directory &gt; App Registrations.</p>
+<p>Once collected the easiest way to manage these details is via msticpyconfig.yaml - simply add them to the file in the following format:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">MDATPApp:</span>
+<span class="sd">  Args:</span>
+<span class="sd">    clientId: &quot;{Application (client) ID}&quot;</span>
+<span class="sd">    clientSecret: &quot;{Client Secret}&quot;</span>
+<span class="sd">    tenantId: &quot;{Directory (tenant) ID}&quot;</span>
+<span class="sd">&#39;&#39;&#39;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>You can then initialize a data provider for MDATP and connect the provider:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">msticpy.data.data_providers</span> <span class="kn">import</span> <span class="n">QueryProvider</span>
+<span class="n">mdatp_prov</span> <span class="o">=</span> <span class="n">QueryProvider</span><span class="p">(</span><span class="s1">&#39;MDATP&#39;</span><span class="p">)</span>
+<span class="c1">#app_name is the value of the heading in msticpyconfig.yaml that the app details are stored under.</span>
+<span class="n">mdatp_prov</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;MDATPApp&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Connected.
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;token_type&#39;: &#39;Bearer&#39;,
+ &#39;expires_in&#39;: &#39;3599&#39;,
+ &#39;ext_expires_in&#39;: &#39;3599&#39;,
+ &#39;expires_on&#39;: &#39;1578009447&#39;,
+ &#39;not_before&#39;: &#39;1578005547&#39;,
+ &#39;resource&#39;: &#39;https://api.securitycenter.windows.com&#39;,
+ &#39;access_token&#39;: None}</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Once connected the MDATP data connector functions in a similar manner to other data connectors. You can list queries:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">mdatp_prov</span><span class="o">.</span><span class="n">list_queries</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&#39;MDATP.file_path&#39;,
+ &#39;MDATP.host_alerts&#39;,
+ &#39;MDATP.host_connections&#39;,
+ &#39;MDATP.ip_alerts&#39;,
+ &#39;MDATP.ip_connections&#39;,
+ &#39;MDATP.list_alerts&#39;,
+ &#39;MDATP.list_connections&#39;,
+ &#39;MDATP.list_filehash&#39;,
+ &#39;MDATP.list_files&#39;,
+ &#39;MDATP.list_host_processes&#39;,
+ &#39;MDATP.process_cmd_line&#39;,
+ &#39;MDATP.process_creations&#39;,
+ &#39;MDATP.process_paths&#39;,
+ &#39;MDATP.protocol_connections&#39;,
+ &#39;MDATP.sha1_alerts&#39;,
+ &#39;MDATP.url_alerts&#39;,
+ &#39;MDATP.url_connections&#39;,
+ &#39;MDATP.user_files&#39;,
+ &#39;MDATP.user_logons&#39;,
+ &#39;MDATP.user_network&#39;,
+ &#39;MDATP.user_processes&#39;,
+ &#39;MDATPHunting.accessibility_persistence&#39;,
+ &#39;MDATPHunting.av_sites&#39;,
+ &#39;MDATPHunting.b64_pe&#39;,
+ &#39;MDATPHunting.brute_force&#39;,
+ &#39;MDATPHunting.cve_2018_1000006l&#39;,
+ &#39;MDATPHunting.cve_2018_1111&#39;,
+ &#39;MDATPHunting.cve_2018_4878&#39;,
+ &#39;MDATPHunting.doc_with_link&#39;,
+ &#39;MDATPHunting.dropbox_link&#39;,
+ &#39;MDATPHunting.email_link&#39;,
+ &#39;MDATPHunting.email_smartscreen&#39;,
+ &#39;MDATPHunting.malware_recycle&#39;,
+ &#39;MDATPHunting.network_scans&#39;,
+ &#39;MDATPHunting.powershell_downloads&#39;,
+ &#39;MDATPHunting.service_account_powershell&#39;,
+ &#39;MDATPHunting.smartscreen_ignored&#39;,
+ &#39;MDATPHunting.smb_discovery&#39;,
+ &#39;MDATPHunting.tor&#39;,
+ &#39;MDATPHunting.uncommon_powershell&#39;,
+ &#39;MDATPHunting.user_enumeration&#39;]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Get details about avaliable queries:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">mdatp_prov</span><span class="o">.</span><span class="n">MDATP</span><span class="o">.</span><span class="n">list_alerts</span><span class="p">(</span><span class="s1">&#39;?&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Query:  list_connections
+Data source:  MDATP
+Retrieves list of network connections for a host
+
+Parameters
+----------
+add_query_items: str (optional)
+    Additional query clauses
+end: datetime (optional)
+    Query end time
+start: datetime (optional)
+    Query start time
+    (default value is: -30)
+table: str (optional)
+    Table name
+    (default value is: NetworkCommunicationEvents  )
+Query:
+ {table} | where EventTime &gt;= datetime({start}) | where EventTime &lt;= datetime({end}) {add_query_items}
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Execute queries with default parameters:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">mdatp_prov</span><span class="o">.</span><span class="n">MDATP</span><span class="o">.</span><span class="n">list_alerts</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>AlertId</th>
+      <th>EventTime</th>
+      <th>MachineId</th>
+      <th>ComputerName</th>
+      <th>Severity</th>
+      <th>Category</th>
+      <th>Title</th>
+      <th>FileName</th>
+      <th>SHA1</th>
+      <th>RemoteUrl</th>
+      <th>RemoteIP</th>
+      <th>ReportId</th>
+      <th>Table</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-08T17:22:37.8742974Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>b6d237154f2e528f0b503b58b025862d66b02b73</td>
+      <td></td>
+      <td></td>
+      <td>454</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>da637111470533220658_-1814166510</td>
+      <td>2019-12-05T12:34:34.7864124Z</td>
+      <td>1e9f8f18585e70ef1f167fbf5e8bf7c3dccc5739</td>
+      <td>olaa-win10pro-1607</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>044a0cf1f6bc478a7172bf207eef1e201a18ba02</td>
+      <td></td>
+      <td></td>
+      <td>4369</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>da637111470533220658_-1814166510</td>
+      <td>2019-12-05T12:34:34.7864124Z</td>
+      <td>1e9f8f18585e70ef1f167fbf5e8bf7c3dccc5739</td>
+      <td>olaa-win10pro-1607</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>99ae9c73e9bee6f9c76d6f4093a9882df06832cf</td>
+      <td></td>
+      <td></td>
+      <td>4369</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>da637111448595540767_-885088719</td>
+      <td>2019-12-05T12:11:25.5486226Z</td>
+      <td>499bdd5330f78dc82d0051c8d7a9eb9d69f88333</td>
+      <td>nestorw-win10pro-1803</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>1b3b40fbc889fd4c645cc12c85d0805ac36ba254</td>
+      <td></td>
+      <td></td>
+      <td>14968</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>da637111448595540767_-885088719</td>
+      <td>2019-12-05T12:11:25.5486226Z</td>
+      <td>499bdd5330f78dc82d0051c8d7a9eb9d69f88333</td>
+      <td>nestorw-win10pro-1803</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>3ce71813199abae99348f61f0caa34e2574f831c</td>
+      <td></td>
+      <td></td>
+      <td>14968</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>da637111835325717564_-1865655676</td>
+      <td>2019-12-05T16:05:46.4778106Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>2376</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>da637111835325717564_-1865655676</td>
+      <td>2019-12-05T16:05:46.4778106Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>d487580502354c61808c7180d1a336beb7ad4624</td>
+      <td></td>
+      <td></td>
+      <td>2376</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>da637111691253610692_623907060</td>
+      <td>2019-12-05T16:50:16.9477916Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>915</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>da637111691253610692_623907060</td>
+      <td>2019-12-05T16:50:16.9477916Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8dca9749cd48d286950e7a9fa1088c937cbccad4</td>
+      <td></td>
+      <td></td>
+      <td>915</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T16:56:18.6397738Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1190</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T16:56:18.6397738Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1190</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T16:56:18.6397738Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1190</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T16:56:18.6397738Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1190</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>da637111691251815824_2024877765</td>
+      <td>2019-12-05T16:56:18.6407635Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Persistence</td>
+      <td>Anomaly detected in ASEP registry</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1187</td>
+      <td>RegistryEvents</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>da637111691256543941_-1462732472</td>
+      <td>2019-12-05T16:56:18.6407635Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Persistence</td>
+      <td>An uncommon file was created and added to a Ru...</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1187</td>
+      <td>RegistryEvents</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>da637111691246094719_-1324223004</td>
+      <td>2019-12-05T16:56:18.6685765Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>EAF violation blocked by exploit protection</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1191</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>da637111618734194967_-707278866</td>
+      <td>2019-12-05T16:56:18.8702258Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Low</td>
+      <td>Malware</td>
+      <td>An active 'Artoelo' malware was detected</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>1200</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>17</td>
+      <td>da637111691251004475_-451474344</td>
+      <td>2019-12-05T16:56:19.0725178Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Malware</td>
+      <td>'Artoelo' malware was detected</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1194</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>18</td>
+      <td>da637111691511319089_701653122</td>
+      <td>2019-12-05T17:01:20.0899859Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>SuspiciousActivity</td>
+      <td>A suspicious file was observed</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>1449</td>
+      <td>FileCreationEvents</td>
+    </tr>
+    <tr>
+      <td>19</td>
+      <td>da637111691521375847_1538423732</td>
+      <td>2019-12-05T17:01:20.0899859Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Execution</td>
+      <td>Suspicious behavior by cmd.exe was observed</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>1449</td>
+      <td>FileCreationEvents</td>
+    </tr>
+    <tr>
+      <td>20</td>
+      <td>da637111691521375847_1538423732</td>
+      <td>2019-12-05T17:12:41.4195893Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Execution</td>
+      <td>Suspicious behavior by cmd.exe was observed</td>
+      <td>WindowsDefenderAtpProvisioningService.exe</td>
+      <td>2f5a566429f0df02dd0dfb45be075531f332a887</td>
+      <td></td>
+      <td></td>
+      <td>1960</td>
+      <td>FileCreationEvents</td>
+    </tr>
+    <tr>
+      <td>21</td>
+      <td>da637111691511319089_701653122</td>
+      <td>2019-12-05T17:12:41.4195893Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>SuspiciousActivity</td>
+      <td>A suspicious file was observed</td>
+      <td>WindowsDefenderAtpProvisioningService.exe</td>
+      <td>2f5a566429f0df02dd0dfb45be075531f332a887</td>
+      <td></td>
+      <td></td>
+      <td>1960</td>
+      <td>FileCreationEvents</td>
+    </tr>
+    <tr>
+      <td>22</td>
+      <td>da637111691521375847_1538423732</td>
+      <td>2019-12-05T17:12:41.4195893Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Execution</td>
+      <td>Suspicious behavior by cmd.exe was observed</td>
+      <td>cmd.exe</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>1960</td>
+      <td>FileCreationEvents</td>
+    </tr>
+    <tr>
+      <td>23</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>24</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>25</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>26</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>27</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>28</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T17:12:43.2754844Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1972</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>29</td>
+      <td>da637111691251815824_2024877765</td>
+      <td>2019-12-05T17:12:43.2822557Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Persistence</td>
+      <td>Anomaly detected in ASEP registry</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1970</td>
+      <td>RegistryEvents</td>
+    </tr>
+    <tr>
+      <td>30</td>
+      <td>da637111691256543941_-1462732472</td>
+      <td>2019-12-05T17:12:43.2822557Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>Persistence</td>
+      <td>An uncommon file was created and added to a Ru...</td>
+      <td>WinATP-Intro-Backdoor‮gpj.exe</td>
+      <td>79c3e3cffcf57dd9913a605d5e55b2fdb8ebc4dc</td>
+      <td></td>
+      <td></td>
+      <td>1970</td>
+      <td>RegistryEvents</td>
+    </tr>
+    <tr>
+      <td>31</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-05T14:38:34.3208724Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>45</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>32</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-05T14:38:34.3208724Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8c5437cd76a89ec983e3b364e219944da3dab464</td>
+      <td></td>
+      <td></td>
+      <td>45</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>33</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T15:06:20.3372768Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>256</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>34</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T15:06:20.3372768Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>b6d237154f2e528f0b503b58b025862d66b02b73</td>
+      <td></td>
+      <td></td>
+      <td>256</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>35</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T15:22:44.3072402Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>368</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>36</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T15:22:44.3072402Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>b6d237154f2e528f0b503b58b025862d66b02b73</td>
+      <td></td>
+      <td></td>
+      <td>368</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>37</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T16:02:02.3857966Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>162</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>38</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-05T16:02:02.3857966Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>b6d237154f2e528f0b503b58b025862d66b02b73</td>
+      <td></td>
+      <td></td>
+      <td>162</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>39</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T15:59:28.1181531Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8c5437cd76a89ec983e3b364e219944da3dab464</td>
+      <td></td>
+      <td></td>
+      <td>130</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>40</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T15:59:28.1181531Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>130</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>41</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T17:11:14.931633Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8c5437cd76a89ec983e3b364e219944da3dab464</td>
+      <td></td>
+      <td></td>
+      <td>137</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>42</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T17:11:14.931633Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>137</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>43</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-08T17:22:37.8742974Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>6cbce4a295c163791b60fc23d285e6d84f28ee4c</td>
+      <td></td>
+      <td></td>
+      <td>454</td>
+      <td>MiscEvents</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Execute queries with custom parameters:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">mdatp_prov</span><span class="o">.</span><span class="n">MDATP</span><span class="o">.</span><span class="n">list_alerts</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s2">&quot;-30&quot;</span><span class="p">,</span> <span class="n">add_query_items</span><span class="o">=</span><span class="s2">&quot;| summarize count() by Severity&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Severity</th>
+      <th>count_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>Medium</td>
+      <td>29</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Informational</td>
+      <td>14</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Low</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Print a fully constructed query for debug purposes:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">mdatp_prov</span><span class="o">.</span><span class="n">MDATP</span><span class="o">.</span><span class="n">list_alerts</span><span class="p">(</span><span class="s2">&quot;print&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s2">&quot;-30&quot;</span><span class="p">,</span> <span class="n">add_query_items</span><span class="o">=</span><span class="s2">&quot;| summarize count() by Severity&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39; AlertEvents | where EventTime &gt;= datetime(2019-12-03T23:24:40.794583Z) | where EventTime &lt;= datetime(2020-01-02T23:24:40.794583Z) | summarize count() by Severity&#39;</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Execute a custom query:</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;AlertEvents | sample 10&quot;</span>
+<span class="n">mdatp_prov</span><span class="o">.</span><span class="n">exec_query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>AlertId</th>
+      <th>EventTime</th>
+      <th>MachineId</th>
+      <th>ComputerName</th>
+      <th>Severity</th>
+      <th>Category</th>
+      <th>Title</th>
+      <th>FileName</th>
+      <th>SHA1</th>
+      <th>RemoteUrl</th>
+      <th>RemoteIP</th>
+      <th>ReportId</th>
+      <th>Table</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>da637111553314888493_-215032980</td>
+      <td>2019-12-08T17:22:37.8742974Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>b6d237154f2e528f0b503b58b025862d66b02b73</td>
+      <td></td>
+      <td></td>
+      <td>454</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T17:11:14.931633Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8c5437cd76a89ec983e3b364e219944da3dab464</td>
+      <td></td>
+      <td></td>
+      <td>137</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>da637111470533220658_-1814166510</td>
+      <td>2019-12-05T12:34:34.7864124Z</td>
+      <td>1e9f8f18585e70ef1f167fbf5e8bf7c3dccc5739</td>
+      <td>olaa-win10pro-1607</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>99ae9c73e9bee6f9c76d6f4093a9882df06832cf</td>
+      <td></td>
+      <td></td>
+      <td>4369</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>da637111448595540767_-885088719</td>
+      <td>2019-12-05T12:11:25.5486226Z</td>
+      <td>499bdd5330f78dc82d0051c8d7a9eb9d69f88333</td>
+      <td>nestorw-win10pro-1803</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>1b3b40fbc889fd4c645cc12c85d0805ac36ba254</td>
+      <td></td>
+      <td></td>
+      <td>14968</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>da637111691236503999_-1316647445</td>
+      <td>2019-12-05T16:56:18.6397738Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>RuntimeBroker.exe</td>
+      <td>7ae43b9b9df5c5b8c0b26c36ff02557ceef13e27</td>
+      <td></td>
+      <td></td>
+      <td>1190</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>da637111835325717564_-1865655676</td>
+      <td>2019-12-05T16:05:46.4778106Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>2376</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>da637111835325717564_-1865655676</td>
+      <td>2019-12-05T16:05:46.4778106Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Medium</td>
+      <td>DefenseEvasion</td>
+      <td>Suspicious process injection observed</td>
+      <td>notepad.exe</td>
+      <td>d487580502354c61808c7180d1a336beb7ad4624</td>
+      <td></td>
+      <td></td>
+      <td>2376</td>
+      <td>MiscEvents</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>da637111691253610692_623907060</td>
+      <td>2019-12-05T16:50:16.9477916Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>powershell.exe</td>
+      <td>36c5d12033b2eaf251bae61c00690ffb17fddc87</td>
+      <td></td>
+      <td></td>
+      <td>915</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>da637111691253610692_623907060</td>
+      <td>2019-12-05T16:50:16.9477916Z</td>
+      <td>be333ec5312b6aaf4936cc33784577857108bc3a</td>
+      <td>arifb-win10edun-1903</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8dca9749cd48d286950e7a9fa1088c937cbccad4</td>
+      <td></td>
+      <td></td>
+      <td>915</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>da637111536085551266_1012263407</td>
+      <td>2019-12-08T15:59:28.1181531Z</td>
+      <td>f17cf15efe963a9810a0ad1c1842db543bba8775</td>
+      <td>pradeepg-win10entn-1809</td>
+      <td>Informational</td>
+      <td>Execution</td>
+      <td>[Test Alert] Suspicious Powershell commandline</td>
+      <td>cmd.exe</td>
+      <td>8c5437cd76a89ec983e3b364e219944da3dab464</td>
+      <td></td>
+      <td></td>
+      <td>130</td>
+      <td>ProcessCreationEvents</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+ 
+
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {}, "version_major": 2, "version_minor": 0}
+</script>
+
+
+    </main>
+    

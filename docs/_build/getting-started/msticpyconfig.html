@@ -1,0 +1,348 @@
+---
+title: |-
+  msticpy Package Configuration
+pagenum: 5
+prev_page:
+  url: /getting-started/JupyterAndSecurity.html
+next_page:
+  url: /getting-started/JupyterAndAzureSentinel.html
+suffix: .md
+search: vault key secret settings secrets yaml configuration keyvault provider file args name keyring default authkey values msticpyconfig py create section azure msticpy environment read specify workspace true common example providers stored not using tiproviders authentication setting primary tenantid b package custom otherproviders only used e value vaultname note tool available parameter d span need variable here additional run data specifying variables device required python client path mysecret warning also workspaceconfig workspaceid parameters location sections azuresentinel tenant keys store api references myvault usekeyring authority global authntype new specifies cloud interactive openpagerank configky configkv apiid delete show false re pkgconfig module ffc
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">msticpy Package Configuration</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Some elements of msticpy require configuration parameters. An example is
+the Threat Intelligence providers. Values for these and other parameters
+can be set in the <span class="title-ref">msticpyconfig.yaml</span> file.</p>
+<p>The package has a default configuration file, which is stored in the
+package directory. You should not need to edit this file directly.
+Instead you can create a custom file with your own parameters - these
+settings will combine with or override the settings in the default file.</p>
+<p>By default, the custom <span class="title-ref">msticpyconfig.yaml</span> is read from the
+current directory. You can specify an explicit location using an
+environment variable <code>MSTICPYCONFIG</code>.</p>
+<h2 id="Configuration-sections">Configuration sections<a class="anchor-link" href="#Configuration-sections"> </a></h2><h3 id="AzureSentinel">AzureSentinel<a class="anchor-link" href="#AzureSentinel"> </a></h3><p>Here you can specify your default workspace and tenant IDs and add
+additional workspaces if needed.</p>
+<h3 id="QueryDefinitions">QueryDefinitions<a class="anchor-link" href="#QueryDefinitions"> </a></h3><p>This allows you to specify paths to additional yaml query template
+files.</p>
+<h3 id="TIProviders">TIProviders<a class="anchor-link" href="#TIProviders"> </a></h3><p>This allows you to configure which providers are run by default and to
+supply any authorization keys needed to access the service.</p>
+<h3 id="OtherProviders">OtherProviders<a class="anchor-link" href="#OtherProviders"> </a></h3><p>This section is similar to the TIProviders section, allowing you specify
+configuration options for other data providers.</p>
+<h3 id="Key-Vault">Key Vault<a class="anchor-link" href="#Key-Vault"> </a></h3><p>This section contains Azure Key Vault settings. This is only used if you
+choose to store secrets (e.g. API keys) in Key Vault.</p>
+<h2 id="Specifying-secrets-as-Environment-Variables">Specifying secrets as Environment Variables<a class="anchor-link" href="#Specifying-secrets-as-Environment-Variables"> </a></h2><p>Some configuration values can be references to environment Variables
+rather than have a value explicitly stored within the configuration
+file. You might want secrets such as API keys to be supplied this way.
+The <code>Args</code> subsection of TIProvider and OtherProvider entries supports
+storing values as simple strings or as references to named environment
+variables. You can see examples of both in the sample file below.</p>
+<h2 id="Specifying-secrets-as-Key-Vault-secrets">Specifying secrets as Key Vault secrets<a class="anchor-link" href="#Specifying-secrets-as-Key-Vault-secrets"> </a></h2><p>msticpy can read secret values from Key Vault for use with TI and other
+providers. To use this you need to specify settings for your keyvault.</p>
+<div class="highlight"><pre><span></span><span class="nt">KeyVault</span><span class="p">:</span>
+  <span class="nt">TenantId</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5d6a50cf-b1b6-4bfd-ad54-b9822b06ff92</span>
+  <span class="nt">SubscriptionId</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">40dcc8bf-0478-4f3b-b275-ed0a94f2c013</span>
+  <span class="nt">ResourceGroup</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">YourResourceGroup</span>
+  <span class="nt">AzureRegion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">RegionToCreateKV</span>
+  <span class="nt">VaultName</span><span class="p">:</span> <span class="s">&quot;myvault&quot;</span>
+  <span class="nt">UseKeyring</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+  <span class="nt">Authority</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">global</span>
+  <span class="nt">AuthnType</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">device</span>
+</pre></div>
+<p>Under the top level <code>KeyVault</code> section the following entries are
+accepted. Some of these are only required if you plan to use msticpy to
+create a new Key Vault vault.</p>
+<h3 id="Required-Settings">Required Settings<a class="anchor-link" href="#Required-Settings"> </a></h3><table>
+<thead><tr>
+<th style="text-align:left"></th>
+<th style="text-align:left"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">TenantId</td>
+<td style="text-align:left">the Identifier of your Azure tenant</td>
+</tr>
+<tr>
+<td style="text-align:left">VaultName</td>
+<td style="text-align:left">the name of the vault to use (note this can be  </td>
+</tr>
+</tbody>
+</table>
+
+<pre><code>         overridden in the individual secret              
+         specifications                                   |
+</code></pre>
+<p>| Authority | this specifies the Azure cloud instance to use. |</p>
+<p>For most users <code>Authority</code> is "global" (default). Other values are: -
+<strong>usgov</strong>: Azure US Government - <strong>de</strong>: German cloud - <strong>chi</strong>: China
+cloud</p>
+<h3 id="Required-to-Create-a-Key-Vault">Required to Create a Key Vault<a class="anchor-link" href="#Required-to-Create-a-Key-Vault"> </a></h3><table>
+<thead><tr>
+<th style="text-align:left"></th>
+<th style="text-align:left"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">SubscriptionId</td>
+<td style="text-align:left">the Azure subscription holding the Key Vault</td>
+</tr>
+<tr>
+<td style="text-align:left">ResourceGroup</td>
+<td style="text-align:left">the Azure resource group in which to create the </td>
+</tr>
+</tbody>
+</table>
+
+<pre><code>              vault                                            |
+</code></pre>
+<p>| AzureRegion    | the Azure region in which to create the vault   |</p>
+<h3 id="Optional-Settings">Optional Settings<a class="anchor-link" href="#Optional-Settings"> </a></h3><table>
+<thead><tr>
+<th style="text-align:left"></th>
+<th style="text-align:left"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">UseKeyring</td>
+<td style="text-align:left">if True (default) uses the Python keyring      </td>
+</tr>
+</tbody>
+</table>
+
+<pre><code>          package to securely cache Key Vault secrets in  
+          your client session.                            |
+</code></pre>
+<p>| VaultName  | the name of the vault to use (note this can be 
+              overridden in the individual secret<br>
+              specifications)                                 |
+| AuthnType  | this governs the authentication type used by<br>
+              the KeyVault client (to read and write<br>
+              secrets). The choices are "interactive" for<br>
+              interactive browser authentication or<br>
+              "device" for authentication using a<br>
+              user/device code. The default is<br>
+              "interactive".                                  |</p>
+<p>Note</p>
+<p>The <code>AuthnType</code> does not affect the authentication used by the Key Vault
+<strong>Management</strong> client (the creation and enumeration of vaults). This
+always uses device code authentication.</p>
+<h3 id="Specifying-Key-Vault-Secrets-in-Provider-Settings">Specifying Key Vault Secrets in Provider Settings<a class="anchor-link" href="#Specifying-Key-Vault-Secrets-in-Provider-Settings"> </a></h3><p>There are three ways to specify the Key Vault <em>vault</em> and <em>secret</em> names
+to use for a given setting.</p>
+<div class="highlight"><pre><span></span><span class="nt">TIProviders</span><span class="p">:</span>
+
+  <span class="nt">OpenPageRank</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span>
+</pre></div>
+<p>Adding an empty subkey named <code>KeyVault</code> will cause msticpy to use a
+secret name build from the path of the setting. This is the default
+usage. In this example, the secret name will be
+"TIProviders-OpenPageRank-Args-AuthKey". The vault name is taken from
+the setting in the <code>KeyVault</code> settings section.</p>
+<div class="highlight"><pre><span></span><span class="nt">OtherProviders</span><span class="p">:</span>
+  <span class="nt">IPStack</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my_secret</span>
+</pre></div>
+<p>This example specifies "my_secret" as the secret name. The vault name
+is taken from the setting in the <code>KeyVault</code> settings section.</p>
+<div class="highlight"><pre><span></span><span class="nt">OtherProviders</span><span class="p">:</span>
+  <span class="nt">Contoso-GeopIp</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my_vault/my_secret</span>
+</pre></div>
+<p>The final example specifies both a vault name and a secret name. The
+<code>VaultName</code> setting in the <code>KeyVault</code> section is ignored for this
+setting.</p>
+<h3 id="Populating-Key-Vault-secrets-from-an-existing-msticpyconfig.yaml">Populating Key Vault secrets from an existing msticpyconfig.yaml<a class="anchor-link" href="#Populating-Key-Vault-secrets-from-an-existing-msticpyconfig.yaml"> </a></h3><p>The easiest way to move your secrets to Key Vault is to use the
+<code>config2ky.py</code> tool available in the msticpy GitHub repo. You can find
+it in the tools folder.</p>
+<p>Running <code>config2kv.py --help</code> shows the usage of this utility.</p>
+<p>The simplest way to use this tool is to populate your existing secrets
+as strings in your <code>msticpyconfig.yaml</code>. (as shown in some of the
+provider settings in the example at the end of this page).</p>
+<p>You can specify this as the input file using the <code>--path</code> parameter.
+Alternatively, the tool will look for a msticpyconfig.yaml in the
+location specified by the <code>MSTICPYCONFIG</code> environment variable.</p>
+<p>Create a <code>KeyVault</code> configuration section in the file, supplying the
+values described earlier. If you already have a vault that you want to
+use, put the name of the vault in the <code>VaultName</code> setting and run
+<code>config2kv.py</code> with the <code>--exists</code> parameter. This will bypass the Key
+Vault Management client section and the extra authentication step that
+this requires. If you do not have a vault or wish to create a new one,
+omit the <code>--exists</code> parameter and you will be prompted to create one.</p>
+<p>The tool will read secrets and create secret names based on the path of
+the secret (as described above).</p>
+<p>Warning</p>
+<p><code>config2ky</code> will only read and convert items in the provider <code>Args</code>
+sections. Currently, only <code>ApiID</code> and <code>AuthKey</code> values will be used.</p>
+<p>The tool will then write the secret values to the vault. Finally a
+replacement <code>msticpyconfig.yaml</code> is written to the location specified in
+the <code>--path</code> argument. You can then delete or securely store your old
+configuration file and replace it with the one output by <code>config2kv</code>.</p>
+<p>Tip</p>
+<p>you can run <code>config2ky</code> with the <code>--show</code> parameter to perform a
+rehearsal. This will show you the Key Vault secrets that will be created
+and show the text of the msticpyconfig.yaml file that would have been
+created.</p>
+<h3 id="Using-keyring-to-cache-secrets">Using <strong>keyring</strong> to cache secrets<a class="anchor-link" href="#Using-keyring-to-cache-secrets"> </a></h3><p><strong>keyring</strong> is available on most Python platforms: Windows, Linux and
+MacOS. On Linux it requires the installation of optional components -
+either KWallet or Secret Service. See the <a href="https://github.com/jaraco/keyring">Keyring
+Readme</a> for more information.</p>
+<p>Warning</p>
+<p><em>keyring</em> caching is enabled by default. If you are working in an
+environment that does not have one of the supported <em>keyring</em> backends
+installed you should disable keyring caching by adding <code>Keyring: false</code>
+to you configuration settings.</p>
+<p>The advantage of using <em>keyring</em> is that you do not need to
+re-authenticate to Key Vault for each notebook that you use in each
+session. If you have <code>UseKeyring: true</code> in your <code>msticpyconfig.yaml</code>
+file, the first time that you access a Key Vault secret the secret value
+is stored as a keyring password with the same name as the Key Vault
+secret.</p>
+<p>Unfortunately <em>keyring</em> provides no way to list or delete stored
+secrets. If you need to remove the locally-stored secrets use the
+platform utility for the appropriate backend. For example, on Windows,
+<code>cmdkey</code> lets you list and manipulate local stored credentials.</p>
+<p>Warning</p>
+<p><em>keyring</em> secrets are not automatically synchronized with the Key Vault
+secret values. If you change the value of a secret in Key Vault you must
+delete the keyring secret so that the new value will be re-read from Key
+Vault.</p>
+<h3 id="Manually-managing-your-Key-Vault-secrets">Manually managing your Key Vault secrets<a class="anchor-link" href="#Manually-managing-your-Key-Vault-secrets"> </a></h3><p>You can use the Azure portal to create and manage your secrets. If you
+prefer to do this, simply enter the name of the secret in the
+corresponding section for the AuthKey or ApiID of your providers.</p>
+<p>You can also use powershell or Python to manage these programmatically.
+<em>msticpy</em> has some convenience wrappers around the Azure SDK functions.</p>
+<p>The documentation for these is available here:
+:py<code>keyvault_client&lt;msticpy.common.keyvault_client&gt;</code>
+:py<code>secrets_settings&lt;msticpy.common.secrets_settings&gt;</code></p>
+<h2 id="Extending-msticpyconfig.yaml">Extending msticpyconfig.yaml<a class="anchor-link" href="#Extending-msticpyconfig.yaml"> </a></h2><p>You can also extend msticpyconfig to include additional sections to
+support other authentication and configuration options such as MDATP API
+connections. Refer to documentation on these features for required
+structures.</p>
+<p>Settings are read by the
+:py<code>refresh_config&lt;msticpy.common.pkg_config&gt;</code> module. Combined settings are available as the <code>settings</code>
+attribute of this module. Default settings and custom settings (the
+settings that you specify in your own msticpyconfig.yaml) also available
+separately in the <code>default_settings</code> and <code>custom_settngs</code> attributes,
+respectively.</p>
+<p>To force settings to be re-read after the package has been imported,
+call
+:py<code>refresh_config&lt;msticpy.common.pkg_config.refresh_config&gt;</code>.</p>
+<p>The settings exposed in these attributes are python dictionaries that
+reflect the underlying YAML data in the configuration file.</p>
+<p>Note</p>
+<p>the :py<code>~msticpy.common.wsconfig</code> module,
+TIProviders, OtherProviders and the data libraries use additional
+functionality to provide higher-level views of the configuration data.
+An example of this is the using environment variable references to
+replace the actual configuration value with the secret stored in the
+environment variables.</p>
+<h2 id="Comment-configuration-file-sample">Comment configuration file sample<a class="anchor-link" href="#Comment-configuration-file-sample"> </a></h2><div class="highlight"><pre><span></span><span class="nt">AzureSentinel</span><span class="p">:</span>
+  <span class="nt">Workspaces</span><span class="p">:</span>
+    <span class="c1"># Workspace used if you don&#39;t explicitly name a workspace when creating WorkspaceConfig</span>
+    <span class="c1"># Specifying values here overrides config.json settings unless you explictly load</span>
+    <span class="c1"># WorkspaceConfig with config_file parameter (WorkspaceConfig(config_file=&quot;../config.json&quot;)</span>
+    <span class="nt">Default</span><span class="p">:</span>
+      <span class="nt">WorkspaceId</span><span class="p">:</span> <span class="s">&quot;d973e3d2-28e6-458e-b2cf-d38876fb1ba4&quot;</span>
+      <span class="nt">TenantId</span><span class="p">:</span> <span class="s">&quot;4cdf87a8-f0fc-40bb-9d85-68bcf4ac8e61&quot;</span>
+    <span class="c1"># To use these launch with an explicit name - WorkspaceConfig(workspace_name=&quot;Workspace2&quot;)</span>
+    <span class="nt">Workspace2</span><span class="p">:</span>
+      <span class="nt">WorkspaceId</span><span class="p">:</span> <span class="s">&quot;c88dd3c2-d657-4eb3-b913-58d58d811a41&quot;</span>
+      <span class="nt">TenantId</span><span class="p">:</span> <span class="s">&quot;f1f64e65-ff7c-4d71-ad5b-091b6ab39d51&quot;</span>
+    <span class="nt">Workspace3</span><span class="p">:</span>
+      <span class="nt">WorkspaceId</span><span class="p">:</span> <span class="s">&quot;17e64332-19c9-472e-afd7-3629f299300c&quot;</span>
+      <span class="nt">TenantId</span><span class="p">:</span> <span class="s">&quot;4ea41beb-4546-4fba-890b-55553ce6003a&quot;</span>
+<span class="nt">QueryDefinitions</span><span class="p">:</span>
+  <span class="c1"># Add paths to folders containing custom query definitions here</span>
+  <span class="nt">Custom</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/var/global-queries</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">/home/myuser/queries</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">c:/users/myuser/documents</span>
+<span class="nt">TIProviders</span><span class="p">:</span>
+  <span class="c1"># If a provider has Primary: True it will be run by default on IoC lookups</span>
+  <span class="c1"># Secondary providers can be</span>
+  <span class="nt">OTX</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span> <span class="s">&quot;4ea41beb-4546-4fba-890b-55553ce6003a&quot;</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;OTX&quot;</span> <span class="c1"># WARNING - Do not change Provider values!</span>
+  <span class="nt">VirusTotal</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span> <span class="s">&quot;4ea41beb-4546-4fba-890b-55553ce6003a&quot;</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;VirusTotal&quot;</span>
+  <span class="nt">XForce</span><span class="p">:</span>
+    <span class="c1"># You can store items in an environment variable using this syntax</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">ApiID</span><span class="p">:</span>
+        <span class="nt">EnvironmentVar</span><span class="p">:</span> <span class="s">&quot;XFORCE_ID&quot;</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">EnvironmentVar</span><span class="p">:</span> <span class="s">&quot;XFORCE_KEY&quot;</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;XForce&quot;</span>
+  <span class="nt">AzureSentinel</span><span class="p">:</span>
+    <span class="c1"># Note this can be a different workspace/tenant from your main workspace</span>
+    <span class="c1"># This only controls where the Azure Sentinel TI provider looks for the</span>
+    <span class="c1"># ThreatIndicator table.</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">WorkspaceID</span><span class="p">:</span> <span class="s">&quot;c88dd3c2-d657-4eb3-b913-58d58d811a41&quot;</span>
+      <span class="nt">TenantID</span><span class="p">:</span> <span class="s">&quot;f1f64e65-ff7c-4d71-ad5b-091b6ab39d51&quot;</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;AzSTI&quot;</span>
+  <span class="nt">OpenPageRank</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;OPR&quot;</span>
+  <span class="nt">TorExitNodes</span><span class="p">:</span>
+    <span class="nt">Primary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;Tor&quot;</span>
+<span class="nt">OtherProviders</span><span class="p">:</span>
+  <span class="nt">GeoIPLite</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">EnvironmentVar</span><span class="p">:</span> <span class="s">&quot;MAXMIND_AUTH&quot;</span>
+      <span class="nt">DBFolder</span><span class="p">:</span> <span class="s">&quot;~/.msticpy&quot;</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;GeoLiteLookup&quot;</span>
+  <span class="nt">IPStack</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my_secret</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;IPStackLookup&quot;</span>
+  <span class="nt">Contoso-GeopIp</span><span class="p">:</span>
+    <span class="nt">Args</span><span class="p">:</span>
+      <span class="nt">AuthKey</span><span class="p">:</span>
+        <span class="nt">KeyVault</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my_vault/my_secret</span>
+    <span class="nt">Provider</span><span class="p">:</span> <span class="s">&quot;ContosoLookup&quot;</span>
+</pre></div>
+<h2 id="See-also">See also<a class="anchor-link" href="#See-also"> </a></h2><p><code>The Threat Intelligence Providers documention &lt;../data_acquisition/TIProviders&gt;</code></p>
+<p>:py<code>wsconfig&lt;msticpy.common.wsconfig&gt;</code>
+:py<code>provider_settings&lt;msticpy.common.provider_settings&gt;</code> :py<code>wsconfig&lt;msticpy.common.pkg_config&gt;</code></p>
+
+</div>
+</div>
+</div>
+</div>
+
+ 
+
+
+    </main>
+    

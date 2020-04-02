@@ -1,0 +1,29 @@
+- url: /introduction
+  not_numbered: true
+- title: GitHub Repository
+  url: https://github.com/microsoft/msticpy
+  external: true
+  not_numbered: true
+- divider: true
+- header: Getting Started
+- url: /getting-started/Introduction
+  not_numbered: true
+  sections:
+  - url: /getting-started/Installing
+  - url: /getting-started/PackageStructure
+  - url: /getting-started/JupyterAndSecurity
+  - url: /getting-started/msticpyconfig
+  - url: /getting-started/JupyterAndAzureSentinel
+- divider: true
+- header: Notebooks
+- url: /notebooks/Base64Unpack
+- url: /notebooks/Data_Queries
+- url: /notebooks/EventClustering
+- url: /notebooks/EventTimeline
+- url: /notebooks/FoliumMap
+- url: /notebooks/GeoIPLookups
+- url: /notebooks/IoCExtract
+- url: /notebooks/MDATPQuery
+- url: /notebooks/NotebookWidgets
+- url: /notebooks/TIProviders
+- url: /notebooks/VirusTotalLookup

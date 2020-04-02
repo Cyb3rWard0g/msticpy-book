@@ -1,0 +1,3806 @@
+---
+redirect_from:
+  - "/notebooks/tiproviders"
+interact_link: content/notebooks/TIProviders.ipynb
+kernel_name: python3
+kernel_path: content/notebooks
+has_widgets: false
+title: |-
+  msticpy Threat Intel Lookup
+pagenum: 16
+prev_page:
+  url: /notebooks/NotebookWidgets.html
+next_page:
+  url: /notebooks/VirusTotalLookup.html
+suffix: .ipynb
+search: lookup providers str ioc toc data id provider multiple href modified iocs span class dataframe lilispana type single primary none list specifying tilookup file looking pandas using types msticpy optional itemlispana result li ul ranges observable default ioctype threat spanul configuration lookupioc passive dns lookupiocs ip tuple intel ti also support available convert let display work usage geoip inferring vs explicity mixed need parameters iocquerytype provscope kwargs bool e g column observables current secondary used supply cases not query mapping iterable obscol subclass lookups div input processing api key specific below shows workspace tenant connection same directory specify font name
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">msticpy Threat Intel Lookup</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>This notebook describes the use of the Threat Intelligence lookup class in msticpy.
+The class allows lookup of individual or multiple IoCs from one or more TI providers.</p>
+<p>TILookup is also extensible - you can subclass TIProvider to implement your own custom lookups. You can also subclass the HTTPProvider or KqlProvider classes, which provide support for querying a REST endpoint or Log Analytics table respectively.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><h1>Table of Contents<span class="tocSkip"></span></h1></p>
+<div class="toc"><ul class="toc-item"><li><span><a href="#msticpy-Threat-Intel-Lookup" data-toc-modified-id="msticpy-Threat-Intel-Lookup-1">msticpy Threat Intel Lookup</a></span></li><li><span><a href="#TILookup-class" data-toc-modified-id="TILookup-class-2">TILookup class</a></span><ul class="toc-item"><li><span><a href="#Available-Providers" data-toc-modified-id="Available-Providers-2.1">Available Providers</a></span></li><li><span><a href="#Configuration-File" data-toc-modified-id="Configuration-File-2.2">Configuration File</a></span></li><li><span><a href="#Looking-up-IoCs" data-toc-modified-id="Looking-up-IoCs-2.3">Looking up IoCs</a></span><ul class="toc-item"><li><span><a href="#lookup_ioc" data-toc-modified-id="lookup_ioc-2.3.1">lookup_ioc</a></span></li><li><span><a href="#Lookup-an-IoC-from-a-single-provider" data-toc-modified-id="Lookup-an-IoC-from-a-single-provider-2.3.2">Lookup an IoC from a single provider</a></span><ul class="toc-item"><li><span><a href="#Or-convert-result-to-a-DataFrame-and-let-pandas-do-the-display-work..." data-toc-modified-id="Or-convert-result-to-a-DataFrame-and-let-pandas-do-the-display-work...-2.3.2.1">Or convert result to a DataFrame and let pandas do the display work...</a></span></li></ul></li></ul></li><li><span><a href="#Lookup-using-all-primary-providers" data-toc-modified-id="Lookup-using-all-primary-providers-2.4">Lookup using all primary providers</a></span></li><li><span><a href="#Provider-Usage" data-toc-modified-id="Provider-Usage-2.5">Provider Usage</a></span><ul class="toc-item"><li><span><a href="#Use-to-do-a-passive-DNS-lookup" data-toc-modified-id="Use-to-do-a-passive-DNS-lookup-2.5.1">Use to do a passive DNS lookup</a></span></li><li><span><a href="#Use-to-do-a-GeoIP-lookup" data-toc-modified-id="Use-to-do-a-GeoIP-lookup-2.5.2">Use to do a GeoIP lookup</a></span></li></ul></li><li><span><a href="#Inferring-IoC-Type-vs.-Specifying-explicity" data-toc-modified-id="Inferring-IoC-Type-vs.-Specifying-explicity-2.6">Inferring IoC Type vs. Specifying explicity</a></span></li><li><span><a href="#Looking-up-Multiple-IoCs" data-toc-modified-id="Looking-up-Multiple-IoCs-2.7">Looking up Multiple IoCs</a></span><ul class="toc-item"><li><span><a href="#lookup_iocs" data-toc-modified-id="lookup_iocs-2.7.1">lookup_iocs</a></span></li><li><span><a href="#Multiple-IP-Lookup-from-single-provider" data-toc-modified-id="Multiple-IP-Lookup-from-single-provider-2.7.2">Multiple IP Lookup from single provider</a></span></li><li><span><a href="#Multiple-IoCs-using-all-providers" data-toc-modified-id="Multiple-IoCs-using-all-providers-2.7.3">Multiple IoCs using all providers</a></span></li><li><span><a href="#Multiple-Mixed-IoC-Types" data-toc-modified-id="Multiple-Mixed-IoC-Types-2.7.4">Multiple Mixed IoC Types</a></span></li></ul></li><li><span><a href="#Specifying-Time-Ranges" data-toc-modified-id="Specifying-Time-Ranges-2.8">Specifying Time Ranges</a></span></li></ul></li></ul></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Imports</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">msticpy.common.utility</span> <span class="kn">import</span> <span class="n">check_py_version</span>
+<span class="n">MIN_REQ_PYTHON</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">check_py_version</span><span class="p">(</span><span class="n">MIN_REQ_PYTHON</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">get_ipython</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">Markdown</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_rows&#39;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_columns&#39;</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_colwidth&#39;</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">msticpy.data</span> <span class="kn">import</span> <span class="n">QueryProvider</span>
+<span class="kn">from</span> <span class="nn">msticpy.nbtools</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">msticpy.sectools</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This product includes GeoLite2 data created by MaxMind, available from
+<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+
+This library uses services provided by ipstack.
+<a href="https://ipstack.com">https://ipstack.com</a>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="TILookup-class">TILookup class<a class="anchor-link" href="#TILookup-class"> </a></h1><p>Input can be a single IoC observable or a pandas DataFrame containing
+multiple observables. Processing may require a an API key and
+processing performance may be limited to a specific number of
+requests per minute for the account type that you have.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># TILookup class</span>
+<span class="n">display</span><span class="p">(</span><span class="n">Markdown</span><span class="p">(</span><span class="s2">&quot;### Constructor</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">TILookup</span><span class="o">.</span><span class="fm">__init__</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">Markdown</span><span class="p">(</span><span class="s2">&quot;### Attributes</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="n">att</span> <span class="k">for</span> <span class="n">att</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">TILookup</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">att</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)]:</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">Markdown</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;#### _</span><span class="si">{name}</span><span class="s2">()_&quot;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">TILookup</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h3 id="Constructor">Constructor<a class="anchor-link" href="#Constructor"> </a></h3>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Initialize TILookup instance.
+
+        Parameters
+        ----------
+        primary_providers : Optional[List[TIProvider]], optional
+            Primary TI Providers, by default None
+        secondary_providers : Optional[List[TIProvider]], optional
+            Secondary TI Providers, by default None
+
+        
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h3 id="Attributes">Attributes<a class="anchor-link" href="#Attributes"> </a></h3>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_addprovider()">_add<em>provider()</em><a class="anchor-link" href="#_addprovider()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Add a TI provider to the current collection.
+
+        Parameters
+        ----------
+        provider : TIProvider
+            Provider instance
+        name : str, optional
+            The name to use for the provider (overrides the class name
+            of `provider`)
+        primary : bool, optional
+            &#34;primary&#34; or &#34;secondary&#34; if False, by default &#34;primary&#34;
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_availableproviders()">_available<em>providers()</em><a class="anchor-link" href="#_availableproviders()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Return a list of builtin providers.
+
+        Returns
+        -------
+        List[str]
+            List of TI Provider classes.
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_list_availableproviders()">_list_available<em>providers()</em><a class="anchor-link" href="#_list_availableproviders()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Print a list of builtin providers with optional usage.
+
+        Parameters
+        ----------
+        show_query_types : bool, optional
+            Show query types supported by providers, by default False
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_loadedproviders()">_loaded<em>providers()</em><a class="anchor-link" href="#_loadedproviders()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Return dictionary of loaded providers.
+
+        Returns
+        -------
+        Dict[str, TIProvider]
+            [description]
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_lookupioc()">_lookup<em>ioc()</em><a class="anchor-link" href="#_lookupioc()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Lookup single IoC in active providers.
+
+        Parameters
+        ----------
+        observable : str
+            IoC observable
+            (`ioc` is also an alias for observable)
+        ioc_type : str, optional
+            One of IoCExtract.IoCType, by default None
+            If none, the IoC type will be inferred
+        ioc_query_type: str, optional
+            The ioc query type (e.g. rep, info, malware)
+        providers: List[str]
+            Explicit list of providers to use
+        prov_scope : str, optional
+            Use &#34;primary&#34;, &#34;secondary&#34; or &#34;all&#34; providers, by default &#34;primary&#34;
+        kwargs :
+            Additional arguments passed to the underlying provider(s)
+
+        Returns
+        -------
+        Tuple[bool, List[Tuple[str, LookupResult]]]
+            The result returned as a tuple(bool, list):
+            bool indicates whether a TI record was found in any provider
+            list has an entry for each provider result
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_lookupiocs()">_lookup<em>iocs()</em><a class="anchor-link" href="#_lookupiocs()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Lookup a collection of IoCs.
+
+        Parameters
+        ----------
+        data : Union[pd.DataFrame, Mapping[str, str], Iterable[str]]
+            Data input in one of three formats:
+            1. Pandas dataframe (you must supply the column name in
+            `obs_col` parameter)
+            2. Mapping (e.g. a dict) of [observable, IoCType]
+            3. Iterable of observables - IoCTypes will be inferred
+        obs_col : str, optional
+            DataFrame column to use for observables, by default None
+        ioc_type_col : str, optional
+            DataFrame column to use for IoCTypes, by default None
+        ioc_query_type: str, optional
+            The ioc query type (e.g. rep, info, malware)
+        providers: List[str]
+            Explicit list of providers to use
+        prov_scope : str, optional
+            Use &#34;primary&#34;, &#34;secondary&#34; or &#34;all&#34; providers, by default &#34;primary&#34;
+        kwargs :
+            Additional arguments passed to the underlying provider(s)
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame of results
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_providerstatus()">_provider<em>status()</em><a class="anchor-link" href="#_providerstatus()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Return loaded provider status.
+
+        Returns
+        -------
+        Iterable[str]
+            List of providers and descriptions.
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_providerusage()">_provider<em>usage()</em><a class="anchor-link" href="#_providerusage()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Print usage of loaded providers.
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_reload_providersettings()">_reload_provider<em>settings()</em><a class="anchor-link" href="#_reload_providersettings()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Reload provider settings from config.
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_reloadproviders()">_reload<em>providers()</em><a class="anchor-link" href="#_reloadproviders()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Reload providers based on currret settings in config.
+
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="_result_todf()">_result_to<em>df()</em><a class="anchor-link" href="#_result_todf()"> </a></h4>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+        Return DataFrame representation of IoC Lookup response.
+
+        Parameters
+        ----------
+        ioc_lookup : Tuple[bool, List[Tuple[str, LookupResult]]]
+            Output from `lookup_ioc`
+
+        Returns
+        -------
+        pd.DataFrame
+            The response as a DataFrame with a row for each
+            provider response.
+
+        
+
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Available-Providers">Available Providers<a class="anchor-link" href="#Available-Providers"> </a></h2><p>The <strong>msticpy</strong> TI Provider library can lookup IoCs in multiple providers.</p>
+<p>The list below shows the current set of providers.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ti_lookup</span> <span class="o">=</span> <span class="n">TILookup</span><span class="p">()</span>
+<span class="c1"># List available providers</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">available_providers</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<!DOCTYPE html>
+                    <html><body><script>
+
+                        // close authentication window
+                        if (kql_MagicUserCodeAuthWindow && kql_MagicUserCodeAuthWindow.opener != null && !kql_MagicUserCodeAuthWindow.closed) {
+                            kql_MagicUserCodeAuthWindow.close()
+                        }
+                        // TODO: make sure, you clear the right cell. BTW, not sure it is a must to do any clearing
+
+                        // clear output cell
+                        Jupyter.notebook.clear_output(Jupyter.notebook.get_selected_index())
+
+                        // TODO: if in run all mode, move to last cell, otherwise move to next cell
+                        // move to next cell
+
+                    </script></body></html>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<!DOCTYPE html>
+            <html><body>
+            <div style=''>
+
+
+            <button onclick="this.style.visibility='visible';kql_MagicLaunchWindowFunction('Kqlmagic_temp_files/_a927809c-8142-43e1-96b3-4ad87cfe95a3_at_loganalytics_schema.html','fullscreen=no,directories=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=no,titlebar=no,toolbar=no,','_a927809c_8142_43e1_96b3_4ad87cfe95a3_at_loganalytics_schema','')">popup schema a927809c-8142-43e1-96b3-4ad87cfe95a3@loganalytics</button>
+
+            </div>
+
+            <script>
+
+            function kql_MagicLaunchWindowFunction(file_path, window_params, window_name, notebooks_host) {
+                var url;
+                if (notebooks_host == 'text') {
+                    url = ''
+                } else if (file_path.startsWith('http')) {
+                    url = file_path;
+                } else {
+                    var base_url = '';
+
+                    // check if azure notebook
+                    var azure_host = (notebooks_host == null || notebooks_host.length == 0) ? 'https://notebooks.azure.com' : notebooks_host;
+                    var start = azure_host.search('//');
+                    var azure_host_suffix = '.' + azure_host.substring(start+2);
+
+                    var loc = String(window.location);
+                    var end = loc.search(azure_host_suffix);
+                    start = loc.search('//');
+                    if (start > 0 && end > 0) {
+                        var parts = loc.substring(start+2, end).split('-');
+                        if (parts.length == 2) {
+                            var library = parts[0];
+                            var user = parts[1];
+                            base_url = azure_host + '/api/user/' +user+ '/library/' +library+ '/html/';
+                        }
+                    }
+
+                    // check if local jupyter lab
+                    if (base_url.length == 0) {
+                        var configDataScipt  = document.getElementById('jupyter-config-data');
+                        if (configDataScipt != null) {
+                            var jupyterConfigData = JSON.parse(configDataScipt.textContent);
+                            if (jupyterConfigData['appName'] == 'JupyterLab' && jupyterConfigData['serverRoot'] != null &&  jupyterConfigData['treeUrl'] != null) {
+                                var basePath = 'E:/src/microsoft/msticpy/msticpy/docs/notebooks' + '/';
+                                if (basePath.startsWith(jupyterConfigData['serverRoot'])) {
+                                    base_url = '/files/' + basePath.substring(jupyterConfigData['serverRoot'].length+1);
+                                }
+                            } 
+                        }
+                    }
+
+                    // assume local jupyter notebook
+                    if (base_url.length == 0) {
+
+                        var parts = loc.split('/');
+                        parts.pop();
+                        base_url = parts.join('/') + '/';
+                    }
+                    url = base_url + file_path;
+                }
+
+                window.focus();
+                var w = screen.width / 2;
+                var h = screen.height / 2;
+                params = 'width='+w+',height='+h;
+                kql_Magic__a927809c_8142_43e1_96b3_4ad87cfe95a3_at_loganalytics_schema = window.open(url, window_name, window_params + params);
+                if (url == '') {
+                    var el = kql_Magic__a927809c_8142_43e1_96b3_4ad87cfe95a3_at_loganalytics_schema.document.createElement('p');
+                    kql_Magic__a927809c_8142_43e1_96b3_4ad87cfe95a3_at_loganalytics_schema.document.body.overflow = 'auto';
+                    el.style.top = 0;
+                    el.style.left = 0;
+                    el.innerHTML = file_path;
+                    kql_Magic__a927809c_8142_43e1_96b3_4ad87cfe95a3_at_loganalytics_schema.document.body.appendChild(el);
+                }
+            }
+            </script>
+
+            </body></html>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&#39;AzSTI&#39;, &#39;OTX&#39;, &#39;VirusTotal&#39;, &#39;XForce&#39;]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Configuration-File">Configuration File<a class="anchor-link" href="#Configuration-File"> </a></h2><p>You can configure primary and secondary providers. 
+Primary providers are used by default.</p>
+<p>You may need to supply an authorization (API) key and in some cases a user ID for each provider.</p>
+<p>For LogAnalytics/Azure Sentinel providers, you will need the workspace ID and tenant ID and will need to authenticate in order to access the data (although if you have an existing authenticated connection with the same workspace/tenant, this connection will be re-used).</p>
+<p>The configuration file is read from the current directory.</p>
+<p>Alternatively, you can specify a location for this file in an environment variable <code>MSTICPYCONFIG</code>.</p>
+<p>If you need to create a config file, uncomment the lines in the following cell.<br>
+<font color="red">Warning - this will overwrite a file of the same name in the current directory</font></p>
+<p>Delete any provider entries that you do not want to use and add the missing parameters for your providers.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># %%writefile msticpyconfig.yaml</span>
+<span class="c1"># QueryDefinitions:</span>
+
+<span class="c1"># TIProviders:</span>
+<span class="c1">#   OTX:</span>
+<span class="c1">#     Args:</span>
+<span class="c1">#       AuthKey: &quot;your-otx-key&quot;</span>
+<span class="c1">#     Primary: True</span>
+<span class="c1">#     Provider: &quot;OTX&quot; # Explicitly name provider to override</span>
+<span class="c1">#   VirusTotal:</span>
+<span class="c1">#     Args:</span>
+<span class="c1">#       AuthKey: &quot;your-vt-key&quot;</span>
+<span class="c1">#     Primary: True</span>
+<span class="c1">#     Provider: &quot;VirusTotal&quot;</span>
+<span class="c1">#   XForce:</span>
+<span class="c1">#     Args:</span>
+<span class="c1">#       ApiID: &quot;your-xforce-id&quot;</span>
+<span class="c1">#       AuthKey: &quot;your-xforce-key&quot;</span>
+<span class="c1">#     Primary: True</span>
+<span class="c1">#     Provider: &quot;XForce&quot;</span>
+<span class="c1">#   AzureSentinel:</span>
+<span class="c1">#     Args:</span>
+<span class="c1">#       WorkspaceID: &quot;your-azure-sentinel-workspace-id&quot;</span>
+<span class="c1">#       TenantID: &quot;your-azure-sentinel-tenant-id&quot;</span>
+<span class="c1">#     Primary: True</span>
+<span class="c1">#     Provider: &quot;AzSTI&quot;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Reload providers to pick up new settings</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ti_lookup</span><span class="o">.</span><span class="n">reload_providers</span><span class="p">()</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">provider_status</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="fc5e8d80-98da-43b7-90bc-bf0362031ef6"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#fc5e8d80-98da-43b7-90bc-bf0362031ef6');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&#39;OTX - AlientVault OTX Lookup. (primary)&#39;,
+ &#39;XForce - IBM XForce Lookup. (primary)&#39;,
+ &#39;AzSTI - Azure Sentinel TI provider class. (primary)&#39;,
+ &#39;VirusTotal - VirusTotal Lookup. (secondary)&#39;]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Looking-up-IoCs">Looking up IoCs<a class="anchor-link" href="#Looking-up-IoCs"> </a></h2>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="lookup_ioc">lookup_ioc<a class="anchor-link" href="#lookup_ioc"> </a></h3><p>To lookup a single IoC.</p>
+
+<pre><code>ti_lookup.lookup_ioc(
+    observable: str = None,
+    ioc_type: str = None,
+    ioc_query_type: str = None,
+    providers: List[str] = None,
+    prov_scope: str = 'primary',
+    **kwargs,
+) -&gt; Tuple[bool, List[Tuple[str, msticpy.sectools.tiproviders.ti_provider_base.LookupResult]]]
+
+Lookup single IoC in active providers.
+
+Parameters
+----------
+observable : str
+    IoC observable
+    (`ioc` is also an alias for observable)
+ioc_type : str, optional
+    One of IoCExtract.IoCType, by default None
+    If none, the IoC type will be inferred
+ioc_query_type: str, optional
+    The ioc query type (e.g. rep, info, malware)
+providers: List[str]
+    Explicit list of providers to use
+prov_scope : str, optional
+    Use primary, secondary or all providers, by default "primary"
+kwargs :
+    Additional arguments passed to the underlying provider(s)
+
+Returns
+-------
+Tuple[bool, List[Tuple[str, LookupResult]]]
+    The result returned as a tuple(bool, list):
+    bool indicates whether a TI record was found in any provider
+    list has an entry for each provider result</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Uncomment this and run to see the document string</span>
+<span class="c1"># ti_lookup.lookup_ioc?</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Lookup-an-IoC-from-a-single-provider">Lookup an IoC from a single provider<a class="anchor-link" href="#Lookup-an-IoC-from-a-single-provider"> </a></h3><p>And show the output</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;52.183.120.194&quot;</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;AzSTI&quot;</span><span class="p">,</span> <span class="s2">&quot;XForce&quot;</span><span class="p">])</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">result_to_df</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="54399bf1-8373-4441-b4a0-fbb94e038de2"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#54399bf1-8373-4441-b4a0-fbb94e038de2');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="2f47e231-d07d-4ce1-a557-3cbd8f9d9e12"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#2f47e231-d07d-4ce1-a557-3cbd8f9d9e12');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Result</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Reference</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>XForce</td>
+      <td>52.183.120.194</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'ip': '52.183.120.194', 'history': [{'created...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/52.183.120...</td>
+      <td>200</td>
+    </tr>
+    <tr>
+      <td>AzSTI</td>
+      <td>52.183.120.194</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2</td>
+      <td>{'Action': ['alert'], 'ThreatType': ['Malware'...</td>
+      <td>Indic...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;52.183.120.194&quot;</span><span class="p">)</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">result_to_df</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>OTX</th>
+      <th>XForce</th>
+      <th>AzSTI</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Ioc</td>
+      <td>52.183.120.194</td>
+      <td>52.183.120.194</td>
+      <td>52.183.120.194</td>
+    </tr>
+    <tr>
+      <td>IocType</td>
+      <td>ipv4</td>
+      <td>ipv4</td>
+      <td>ipv4</td>
+    </tr>
+    <tr>
+      <td>QuerySubtype</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Result</td>
+      <td>True</td>
+      <td>True</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>Severity</td>
+      <td>0</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>Details</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'Action': ['alert'], 'ThreatType': ['Malware'...</td>
+    </tr>
+    <tr>
+      <td>RawResult</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+      <td>{'ip': '52.183.120.194', 'history': [{'created...</td>
+      <td>Indic...</td>
+    </tr>
+    <tr>
+      <td>Reference</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/52.183.120...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+    </tr>
+    <tr>
+      <td>Status</td>
+      <td>200</td>
+      <td>200</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pprint</span>
+<span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="n">result</span><span class="p">,</span> <span class="n">details</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;38.75.137.9&quot;</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OTX&quot;</span><span class="p">])</span>
+
+<span class="c1"># the details is a list (since there could be multiple responses for an IoC)</span>
+<span class="k">for</span> <span class="n">provider</span><span class="p">,</span> <span class="n">detail</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+    <span class="n">detail</span><span class="o">.</span><span class="n">summary</span>
+<span class="c1"># Un-comment to view raw response</span>
+<span class="c1">#     print(&quot;\nRaw Results&quot;)</span>
+<span class="c1">#     pp.pprint(detail.raw_result)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>OTX
+ioc: 38.75.137.9 ( ipv4 )
+result: True
+severity: 1 warning
+{   &#39;names&#39;: [&#39;Underminer EK&#39;],
+    &#39;pulse_count&#39;: 1,
+    &#39;references&#39;: [   [   &#39;https://blog.malwarebytes.com/threat-analysis/2019/07/exploit-kits-summer-2019-review/&#39;]],
+    &#39;tags&#39;: [[]]}
+reference:  https://otx.alienvault.com/api/v1/indicators/IPv4/38.75.137.9/general
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="Or-convert-result-to-a-DataFrame-and-let-pandas-do-the-display-work...">Or convert result to a DataFrame and let pandas do the display work...<a class="anchor-link" href="#Or-convert-result-to-a-DataFrame-and-let-pandas-do-the-display-work..."> </a></h4>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;38.75.137.9&quot;</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OTX&quot;</span><span class="p">])</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">result_to_df</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>OTX</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Ioc</td>
+      <td>38.75.137.9</td>
+    </tr>
+    <tr>
+      <td>IocType</td>
+      <td>ipv4</td>
+    </tr>
+    <tr>
+      <td>QuerySubtype</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Result</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>Severity</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>Details</td>
+      <td>{'pulse_count': 1, 'names': ['Underminer EK'],...</td>
+    </tr>
+    <tr>
+      <td>RawResult</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+    </tr>
+    <tr>
+      <td>Reference</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+    </tr>
+    <tr>
+      <td>Status</td>
+      <td>200</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Extract a single field (RawResult) from the dataframe (.iloc[0] is to select the row)</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">result_to_df</span><span class="p">(</span><span class="n">result</span><span class="p">)[</span><span class="s2">&quot;RawResult&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;sections&#39;: [&#39;general&#39;,
+  &#39;geo&#39;,
+  &#39;reputation&#39;,
+  &#39;url_list&#39;,
+  &#39;passive_dns&#39;,
+  &#39;malware&#39;,
+  &#39;nids_list&#39;,
+  &#39;http_scans&#39;],
+ &#39;city&#39;: &#39;Los Angeles&#39;,
+ &#39;area_code&#39;: 0,
+ &#39;pulse_info&#39;: {&#39;count&#39;: 1,
+  &#39;references&#39;: [&#39;https://blog.malwarebytes.com/threat-analysis/2019/07/exploit-kits-summer-2019-review/&#39;],
+  &#39;pulses&#39;: [{&#39;indicator_type_counts&#39;: {&#39;URL&#39;: 16,
+     &#39;FileHash-MD5&#39;: 5,
+     &#39;IPv4&#39;: 3},
+    &#39;pulse_source&#39;: &#39;web&#39;,
+    &#39;TLP&#39;: &#39;white&#39;,
+    &#39;description&#39;: &#39;&#39;,
+    &#39;subscriber_count&#39;: 11,
+    &#39;tags&#39;: [],
+    &#39;export_count&#39;: 0,
+    &#39;malware_families&#39;: [],
+    &#39;is_modified&#39;: False,
+    &#39;upvotes_count&#39;: 0,
+    &#39;modified_text&#39;: &#39;55 days ago &#39;,
+    &#39;is_subscribing&#39;: None,
+    &#39;references&#39;: [&#39;https://blog.malwarebytes.com/threat-analysis/2019/07/exploit-kits-summer-2019-review/&#39;],
+    &#39;targeted_countries&#39;: [],
+    &#39;groups&#39;: [{&#39;name&#39;: &#39;DCT Security Team&#39;, &#39;id&#39;: 614}],
+    &#39;vote&#39;: 0,
+    &#39;validator_count&#39;: 0,
+    &#39;threat_hunter_scannable&#39;: True,
+    &#39;is_author&#39;: False,
+    &#39;adversary&#39;: &#39;&#39;,
+    &#39;id&#39;: &#39;5d41d77901a2f8c6e9b650e9&#39;,
+    &#39;industries&#39;: [],
+    &#39;locked&#39;: 0,
+    &#39;name&#39;: &#39;Underminer EK&#39;,
+    &#39;created&#39;: &#39;2019-07-31T18:01:29.744000&#39;,
+    &#39;cloned_from&#39;: None,
+    &#39;downvotes_count&#39;: 0,
+    &#39;modified&#39;: &#39;2019-07-31T18:01:29.744000&#39;,
+    &#39;comment_count&#39;: 0,
+    &#39;indicator_count&#39;: 24,
+    &#39;attack_ids&#39;: [],
+    &#39;in_group&#39;: True,
+    &#39;follower_count&#39;: 0,
+    &#39;votes_count&#39;: 0,
+    &#39;author&#39;: {&#39;username&#39;: &#39;mattvittitoe&#39;,
+     &#39;is_subscribed&#39;: False,
+     &#39;avatar_url&#39;: &#39;https://otx.alienvault.com/assets/images/default-avatar.png&#39;,
+     &#39;is_following&#39;: False,
+     &#39;id&#39;: &#39;79520&#39;},
+    &#39;public&#39;: 1}]},
+ &#39;continent_code&#39;: &#39;NA&#39;,
+ &#39;country_name&#39;: &#39;United States&#39;,
+ &#39;postal_code&#39;: &#39;90017&#39;,
+ &#39;dma_code&#39;: 803,
+ &#39;country_code&#39;: &#39;US&#39;,
+ &#39;flag_url&#39;: &#39;/assets/images/flags/us.png&#39;,
+ &#39;asn&#39;: &#39;AS63023 GTHost&#39;,
+ &#39;city_data&#39;: True,
+ &#39;indicator&#39;: &#39;38.75.137.9&#39;,
+ &#39;whois&#39;: &#39;http://whois.domaintools.com/38.75.137.9&#39;,
+ &#39;type_title&#39;: &#39;IPv4&#39;,
+ &#39;region&#39;: &#39;CA&#39;,
+ &#39;charset&#39;: 0,
+ &#39;longitude&#39;: -118.278,
+ &#39;country_code3&#39;: &#39;USA&#39;,
+ &#39;reputation&#39;: 0,
+ &#39;base_indicator&#39;: {&#39;indicator&#39;: &#39;38.75.137.9&#39;,
+  &#39;description&#39;: &#39;&#39;,
+  &#39;title&#39;: &#39;&#39;,
+  &#39;access_reason&#39;: &#39;&#39;,
+  &#39;access_type&#39;: &#39;public&#39;,
+  &#39;content&#39;: &#39;&#39;,
+  &#39;type&#39;: &#39;IPv4&#39;,
+  &#39;id&#39;: 2127020821},
+ &#39;latitude&#39;: 34.0584,
+ &#39;type&#39;: &#39;IPv4&#39;,
+ &#39;flag_title&#39;: &#39;United States&#39;}</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Lookup-using-all-primary-providers">Lookup using all primary providers<a class="anchor-link" href="#Lookup-using-all-primary-providers"> </a></h2>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;188.127.231.124&quot;</span><span class="p">)</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">result_to_df</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="857251f7-ba95-4d59-94f5-3eb3713fdb79"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#857251f7-ba95-4d59-94f5-3eb3713fdb79');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="2a9b04af-47da-48de-9b2b-13444ff72446"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#2a9b04af-47da-48de-9b2b-13444ff72446');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Result</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Reference</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>OTX</td>
+      <td>188.127.231.124</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2</td>
+      <td>{'pulse_count': 5, 'names': ['Locky Ransomware...</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+      <td>200</td>
+    </tr>
+    <tr>
+      <td>XForce</td>
+      <td>188.127.231.124</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'ip': '188.127.231.124', 'history': [{'create...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/188.127.23...</td>
+      <td>200</td>
+    </tr>
+    <tr>
+      <td>AzSTI</td>
+      <td>188.127.231.124</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0 rows returned.</td>
+      <td>None</td>
+      <td>None</td>
+      <td>-1</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Provider-Usage">Provider Usage<a class="anchor-link" href="#Provider-Usage"> </a></h2><p>This shows the supported IoC Types.</p>
+<p>In some cases an IoC type will also support special types of sub-query such as geo-ip and passive-dns</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">display</span><span class="p">(</span><span class="n">ti_lookup</span><span class="o">.</span><span class="n">provider_status</span><span class="p">)</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">loaded_providers</span><span class="p">[</span><span class="s2">&quot;AzSTI&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">usage</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>[&#39;OTX - AlientVault OTX Lookup. (primary)&#39;,
+ &#39;XForce - IBM XForce Lookup. (primary)&#39;,
+ &#39;AzSTI - Azure Sentinel TI provider class. (primary)&#39;,
+ &#39;VirusTotal - VirusTotal Lookup. (secondary)&#39;]</pre>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Azure Sentinel TI provider class. Supported query types:
+	ioc_type=dns
+	ioc_type=file_hash
+	ioc_type=hostname
+	ioc_type=ipv4
+	ioc_type=ipv6
+	ioc_type=linux_path
+	ioc_type=md5_hash
+	ioc_type=sha1_hash
+	ioc_type=sha256_hash
+	ioc_type=url
+	ioc_type=windows_path
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ti_lookup</span><span class="o">.</span><span class="n">provider_usage</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Primary providers
+-----------------
+
+Provider class: OTX
+AlientVault OTX Lookup. Supported query types:
+	ioc_type=dns
+	ioc_type=dns, ioc_query_type=geo
+	ioc_type=dns, ioc_query_type=passivedns
+	ioc_type=file_hash
+	ioc_type=hostname
+	ioc_type=ipv4
+	ioc_type=ipv4, ioc_query_type=geo
+	ioc_type=ipv4, ioc_query_type=passivedns
+	ioc_type=ipv6
+	ioc_type=ipv6, ioc_query_type=geo
+	ioc_type=ipv6, ioc_query_type=passivedns
+	ioc_type=md5_hash
+	ioc_type=sha1_hash
+	ioc_type=sha256_hash
+	ioc_type=url
+
+Provider class: XForce
+IBM XForce Lookup. Supported query types:
+	ioc_type=dns
+	ioc_type=dns, ioc_query_type=malware
+	ioc_type=dns, ioc_query_type=passivedns
+	ioc_type=dns, ioc_query_type=whois
+	ioc_type=file_hash
+	ioc_type=hostname, ioc_query_type=whois
+	ioc_type=ipv4
+	ioc_type=ipv4, ioc_query_type=malware
+	ioc_type=ipv4, ioc_query_type=passivedns
+	ioc_type=ipv4, ioc_query_type=rep
+	ioc_type=ipv4, ioc_query_type=whois
+	ioc_type=ipv6
+	ioc_type=ipv6, ioc_query_type=malware
+	ioc_type=ipv6, ioc_query_type=passivedns
+	ioc_type=ipv6, ioc_query_type=rep
+	ioc_type=ipv6, ioc_query_type=whois
+	ioc_type=md5_hash
+	ioc_type=sha1_hash
+	ioc_type=sha256_hash
+	ioc_type=url
+	ioc_type=url, ioc_query_type=malware
+
+Provider class: AzSTI
+Azure Sentinel TI provider class. Supported query types:
+	ioc_type=dns
+	ioc_type=file_hash
+	ioc_type=hostname
+	ioc_type=ipv4
+	ioc_type=ipv6
+	ioc_type=linux_path
+	ioc_type=md5_hash
+	ioc_type=sha1_hash
+	ioc_type=sha256_hash
+	ioc_type=url
+	ioc_type=windows_path
+
+Secondary providers
+-------------------
+
+Provider class: VirusTotal
+VirusTotal Lookup. Supported query types:
+	ioc_type=dns
+	ioc_type=file_hash
+	ioc_type=ipv4
+	ioc_type=md5_hash
+	ioc_type=sha1_hash
+	ioc_type=sha256_hash
+	ioc_type=url
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Use-to-do-a-passive-DNS-lookup">Use to do a passive DNS lookup<a class="anchor-link" href="#Use-to-do-a-passive-DNS-lookup"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;38.75.137.9&quot;</span><span class="p">,</span> <span class="n">ico_type</span><span class="o">=</span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span> <span class="n">ioc_query_type</span><span class="o">=</span><span class="s2">&quot;passivedns&quot;</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;XForce&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Provider result:&quot;</span><span class="p">)</span>
+<span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">raw_result</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(True, [(&#39;XForce&#39;, LookupResult(ioc=&#39;38.75.137.9&#39;, ioc_type=&#39;ipv4&#39;, query_subtype=&#39;passivedns&#39;, result=True, severity=0, details={&#39;records&#39;: 1}, raw_result={&#39;Passive&#39;: {&#39;query&#39;: &#39;0x00000000000000000000ffff264b8909&#39;, &#39;records&#39;: []}, &#39;RDNS&#39;: [&#39;9-137-75-38.clients.gthost.com&#39;], &#39;total_rows&#39;: 1}, reference=&#39;https://api.xforce.ibmcloud.com/resolve/38.75.137.9&#39;, status=200))])
+
+Provider result:
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;Passive&#39;: {&#39;query&#39;: &#39;0x00000000000000000000ffff264b8909&#39;, &#39;records&#39;: []},
+ &#39;RDNS&#39;: [&#39;9-137-75-38.clients.gthost.com&#39;],
+ &#39;total_rows&#39;: 1}</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Use-to-do-a-GeoIP-lookup">Use to do a GeoIP lookup<a class="anchor-link" href="#Use-to-do-a-GeoIP-lookup"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_ioc</span><span class="p">(</span><span class="n">observable</span><span class="o">=</span><span class="s2">&quot;38.75.137.9&quot;</span><span class="p">,</span> <span class="n">ico_type</span><span class="o">=</span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span> <span class="n">ioc_query_type</span><span class="o">=</span><span class="s2">&quot;geo&quot;</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OTX&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Provider result:&quot;</span><span class="p">)</span>
+<span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">raw_result</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(True, [(&#39;OTX&#39;, LookupResult(ioc=&#39;38.75.137.9&#39;, ioc_type=&#39;ipv4&#39;, query_subtype=&#39;geo&#39;, result=True, severity=0, details={}, raw_result={&#39;flag_url&#39;: &#39;/assets/images/flags/us.png&#39;, &#39;city_data&#39;: True, &#39;city&#39;: &#39;Los Angeles&#39;, &#39;region&#39;: &#39;CA&#39;, &#39;charset&#39;: 0, &#39;area_code&#39;: 0, &#39;continent_code&#39;: &#39;NA&#39;, &#39;country_code3&#39;: &#39;USA&#39;, &#39;latitude&#39;: 34.0584, &#39;postal_code&#39;: &#39;90017&#39;, &#39;longitude&#39;: -118.278, &#39;country_code&#39;: &#39;US&#39;, &#39;country_name&#39;: &#39;United States&#39;, &#39;asn&#39;: &#39;AS63023 GTHost&#39;, &#39;dma_code&#39;: 803, &#39;flag_title&#39;: &#39;United States&#39;}, reference=&#39;https://otx.alienvault.com/api/v1/indicators/IPv4/38.75.137.9/geo&#39;, status=200))])
+
+Provider result:
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;flag_url&#39;: &#39;/assets/images/flags/us.png&#39;,
+ &#39;city_data&#39;: True,
+ &#39;city&#39;: &#39;Los Angeles&#39;,
+ &#39;region&#39;: &#39;CA&#39;,
+ &#39;charset&#39;: 0,
+ &#39;area_code&#39;: 0,
+ &#39;continent_code&#39;: &#39;NA&#39;,
+ &#39;country_code3&#39;: &#39;USA&#39;,
+ &#39;latitude&#39;: 34.0584,
+ &#39;postal_code&#39;: &#39;90017&#39;,
+ &#39;longitude&#39;: -118.278,
+ &#39;country_code&#39;: &#39;US&#39;,
+ &#39;country_name&#39;: &#39;United States&#39;,
+ &#39;asn&#39;: &#39;AS63023 GTHost&#39;,
+ &#39;dma_code&#39;: 803,
+ &#39;flag_title&#39;: &#39;United States&#39;}</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Inferring-IoC-Type-vs.-Specifying-explicity">Inferring IoC Type vs. Specifying explicity<a class="anchor-link" href="#Inferring-IoC-Type-vs.-Specifying-explicity"> </a></h2><p>If you do a lookup without specifying a type, TILookup will try to infer the type by matching regexes. There are patterns for all supported types but there are some caveats:</p>
+<ul>
+<li>The match is not 100% foolproof - e.g. some URLs and hash types may be misidentified.</li>
+<li>The inference adds an overhead to each lookup.</li>
+</ul>
+<p>If you know the type that you want to look up, it is always better to explicitly include it.</p>
+<ul>
+<li>For single IoC lookup, use the <code>ioc_type</code> parameter.</li>
+<li>For multiple IoC lookups (see below), supply either:<ul>
+<li>a DataFrame with a column that specifies the type for each entry</li>
+<li>a dictionary of the form <code>{ioc_observable: ioc_type}</code></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Looking-up-Multiple-IoCs">Looking up Multiple IoCs<a class="anchor-link" href="#Looking-up-Multiple-IoCs"> </a></h2>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="lookup_iocs">lookup_iocs<a class="anchor-link" href="#lookup_iocs"> </a></h3>
+<pre><code>Signature:
+ti_lookup.lookup_iocs(
+    data: Union[pandas.core.frame.DataFrame, Mapping[str, str], Iterable[str]],
+    obs_col: str = None,
+    ioc_type_col: str = None,
+    ioc_query_type: str = None,
+    providers: List[str] = None,
+    prov_scope: str = 'primary',
+    **kwargs,
+) -&gt; pandas.core.frame.DataFrame
+
+Lookup a collection of IoCs.
+
+Parameters
+----------
+data : Union[pd.DataFrame, Mapping[str, str], Iterable[str]]
+    Data input in one of three formats:
+    1. Pandas dataframe (you must supply the column name in
+    `obs_col` parameter)
+    2. Mapping (e.g. a dict) of [observable, IoCType]
+    3. Iterable of observables - IoCTypes will be inferred
+obs_col : str, optional
+    DataFrame column to use for observables, by default None
+ioc_type_col : str, optional
+    DataFrame column to use for IoCTypes, by default None
+ioc_query_type: str, optional
+    The ioc query type (e.g. rep, info, malware)
+providers: List[str]
+    Explicit list of providers to use
+prov_scope : str, optional
+    Use primary, secondary or all providers, by default "primary"
+kwargs :
+    Additional arguments passed to the underlying provider(s)
+
+Returns
+-------
+pd.DataFrame
+    DataFrame of results</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Uncomment this and run to see the document string</span>
+<span class="c1"># ti_lookup.lookup_iocs?</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Multiple-IP-Lookup-from-single-provider">Multiple IP Lookup from single provider<a class="anchor-link" href="#Multiple-IP-Lookup-from-single-provider"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ioc_ips</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;51.75.29.61&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;33.44.55.66&quot;</span>
+    <span class="s2">&quot;52.183.120.194&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;13.91.229.209&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1.2.3.4&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;52.167.223.49&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1.2.3.5&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_iocs</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ioc_ips</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="s2">&quot;AzSTI&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="7c075c14-e4d8-4670-af0f-4722250ea2e9"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#7c075c14-e4d8-4670-af0f-4722250ea2e9');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="550b758f-afea-47a5-8dc8-cd175411a58a"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#550b758f-afea-47a5-8dc8-cd175411a58a');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Reference</th>
+      <th>Result</th>
+      <th>Status</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Provider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>1.2.3.4</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0</td>
+      <td>2</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': 'BF59F0493B17FFDCDA7B8D2969342...</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>13.91.229.209</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0</td>
+      <td>2</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': '0F1ED19DB6F3E209EB7B3C70F3DA5...</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>52.167.223.49</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0</td>
+      <td>2</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': 'A6AF4F01F06D5977DE741A41DD1BC...</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0</td>
+      <td>2</td>
+      <td>{'Action': 'alert', 'ThreatType': 'WatchList',...</td>
+      <td>{'IndicatorId': '745AC38B70FF24CC7DCA13BB4467D...</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>1.2.3.5</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0</td>
+      <td>2</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': 'AE428189DCD303DA2A79AF8F85030...</td>
+      <td>AzSTI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Multiple-IoCs-using-all-providers">Multiple IoCs using all providers<a class="anchor-link" href="#Multiple-IoCs-using-all-providers"> </a></h3><p>Output sorted by IoC</p>
+<p>Note that these URLs were picked randomly from the TI databases of the three providers used. In most cases the IoC is found by only that provider, which</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ioc_urls</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;http://cheapshirts.us/zVnMrG.php&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://chinasymbolic.com/i9jnrc&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;https://hotel-bristol.lu/dlry/MAnJIPnY/&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://businesstobuy.net&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://append.pl/srh9xsz&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://104.248.196.145/apache2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://ajaraheritage.ge/g7cberv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://cic-integration.com/hjy93JNBasdas&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;https://google.com&quot;</span><span class="p">,</span>  <span class="c1"># benign</span>
+    <span class="s2">&quot;https://microsoft.com&quot;</span><span class="p">,</span>  <span class="c1"># benign</span>
+    <span class="s2">&quot;https://python.org&quot;</span><span class="p">,</span>  <span class="c1"># benign</span>
+<span class="p">]</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_iocs</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ioc_urls</span><span class="p">)</span>
+<span class="n">results</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">&quot;Ioc&quot;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="b2b8b5cf-7f61-4ab0-8545-15432552020c"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#b2b8b5cf-7f61-4ab0-8545-15432552020c');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="d606c56b-d8ff-4263-8ad7-7f8478aa1dc0"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#d606c56b-d8ff-4263-8ad7-7f8478aa1dc0');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Result</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Reference</th>
+      <th>Status</th>
+      <th>Provider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>5</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Not found.</td>
+      <td>&lt;Response [404]&gt;</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://104...</td>
+      <td>404.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'http://104.248.196.145/apache2'...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': '415EE92D312FAE7ACAAC8329C2EE4...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 2, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://ajaraheritage.ge/g7cberv...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'ajaraheritage.ge', 'cats':...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://aja...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>http://append.pl/srh9xsz</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'pulse_count': 1, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://append.pl/srh9xsz', 'ale...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>http://append.pl/srh9xsz</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>http://append.pl/srh9xsz</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'append.pl', 'cats': {'Soft...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://app...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>http://businesstobuy.net</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>http://businesstobuy.net</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'http://businesstobuy.net', 'ale...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>http://businesstobuy.net</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'businesstobuy.net', 'cats'...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://bus...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>http://cheapshirts.us/zVnMrG.php</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>http://cheapshirts.us/zVnMrG.php</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 7, 'names': ['CryptoWall Ranso...</td>
+      <td>{'indicator': 'http://cheapshirts.us/zVnMrG.ph...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>http://cheapshirts.us/zVnMrG.php</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'cheapshirts.us/zvnmrg.php'...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://che...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>http://chinasymbolic.com/i9jnrc</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'chinasymbolic.com', 'cats'...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://chi...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>http://chinasymbolic.com/i9jnrc</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>http://chinasymbolic.com/i9jnrc</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 2, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://chinasymbolic.com/i9jnrc...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'cic-integration.com', 'cat...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://cic...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'pulse_count': 1, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://cic-integration.com/hjy9...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>https://google.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>https://google.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'https://google.com', 'cats...</td>
+      <td>https://api.xforce.ibmcloud.com/url/https://go...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>https://google.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'https://google.com', 'alexa': '...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>https://hotel-bristol.lu/dlry/MAnJIPnY/</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'https://hotel-bristol.lu/dlry/M...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>https://hotel-bristol.lu/dlry/MAnJIPnY/</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': '53B98EB318CD0B0388240598D0FF9...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>https://hotel-bristol.lu/dlry/MAnJIPnY/</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Not found.</td>
+      <td>&lt;Response [404]&gt;</td>
+      <td>https://api.xforce.ibmcloud.com/url/https://ho...</td>
+      <td>404.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>https://microsoft.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'microsoft.com', 'cats': {'...</td>
+      <td>https://api.xforce.ibmcloud.com/url/https://mi...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>https://microsoft.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'https://microsoft.com', 'alexa'...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>https://microsoft.com</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>https://python.org</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'python.org', 'cats': {'Sof...</td>
+      <td>https://api.xforce.ibmcloud.com/url/https://py...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>https://python.org</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'https://python.org', 'alexa': '...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>https://python.org</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Multiple-Mixed-IoC-Types">Multiple Mixed IoC Types<a class="anchor-link" href="#Multiple-Mixed-IoC-Types"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ioc_mixed</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;http://104.248.196.145/apache2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://ajaraheritage.ge/g7cberv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;http://cic-integration.com/hjy93JNBasdas&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;51.75.29.61&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;33.44.55.66&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;52.183.120.194&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;f8a7135496fd6168df5f0ea21c745db89ecea9accc29c5cf281cdf3145865092&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cc2db822f652ca67038ba7cca8a8bde3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ajaraheritage.ge&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_iocs</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ioc_mixed</span><span class="p">)</span>
+<span class="n">results</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="82e00b11-d934-49e7-81a3-e75c18c06c49"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#82e00b11-d934-49e7-81a3-e75c18c06c49');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="04bde92a-0686-4c71-b8b2-959561878ee2"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#04bde92a-0686-4c71-b8b2-959561878ee2');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="11e9aa51-8da6-43a4-9ba2-8902dda1e7f8"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#11e9aa51-8da6-43a4-9ba2-8902dda1e7f8');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="d7ab717d-46c5-4e1a-835e-f24bc676f7ee"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#d7ab717d-46c5-4e1a-835e-f24bc676f7ee');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="522b7544-bb5e-4dc3-b565-5070bfb71b09"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#522b7544-bb5e-4dc3-b565-5070bfb71b09');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="e72fe767-11c5-4565-8894-1eb8fd32bcf3"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#e72fe767-11c5-4565-8894-1eb8fd32bcf3');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="99fe2ded-79cd-4ee8-9a4b-124dc000e378"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#99fe2ded-79cd-4ee8-9a4b-124dc000e378');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="f71c37d3-f97a-40f5-9cbb-51a2aae46d6b"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#f71c37d3-f97a-40f5-9cbb-51a2aae46d6b');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="ff861560-5bda-4710-8bc3-b1648aadd9c4"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#ff861560-5bda-4710-8bc3-b1648aadd9c4');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="d41a8283-19a1-46fc-b185-a31a54216410"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#d41a8283-19a1-46fc-b185-a31a54216410');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Result</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Reference</th>
+      <th>Status</th>
+      <th>Provider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'http://104.248.196.145/apache2'...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 2, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://ajaraheritage.ge/g7cberv...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'pulse_count': 1, 'names': ['Locky Ransomware...</td>
+      <td>{'indicator': 'http://cic-integration.com/hjy9...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/u...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 28, 'names': ['SSH honeypot lo...</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>33.44.55.66</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>52.183.120.194</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'sections': ['general', 'geo', 'reputation', ...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/I...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>f8a7135496fd6168df5f0ea21c745db89ecea9accc29c5...</td>
+      <td>sha256_hash</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'pulse_count': 3, 'names': ['Emotet IOCs 2/4/...</td>
+      <td>{'indicator': 'f8a7135496fd6168df5f0ea21c745db...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/f...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>cc2db822f652ca67038ba7cca8a8bde3</td>
+      <td>md5_hash</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'pulse_count': 0, 'sections_available': ['gen...</td>
+      <td>{'indicator': 'cc2db822f652ca67038ba7cca8a8bde...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/f...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>ajaraheritage.ge</td>
+      <td>dns</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'pulse_count': 1, 'names': ['Ransomware - Loc...</td>
+      <td>{'indicator': 'ajaraheritage.ge', 'alexa': 'ht...</td>
+      <td>https://otx.alienvault.com/api/v1/indicators/d...</td>
+      <td>200.0</td>
+      <td>OTX</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Not found.</td>
+      <td>&lt;Response [404]&gt;</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://104...</td>
+      <td>404.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'ajaraheritage.ge', 'cats':...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://aja...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'cic-integration.com', 'cat...</td>
+      <td>https://api.xforce.ibmcloud.com/url/http://cic...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'ip': '51.75.29.61', 'history': [{'created': ...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/51.75.29.61</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>33.44.55.66</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'ip': '33.44.55.66', 'history': [{'created': ...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/33.44.55.66</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>52.183.120.194</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>1.0</td>
+      <td>{'score': 1, 'cats': {}, 'categoryDescriptions...</td>
+      <td>{'ip': '52.183.120.194', 'history': [{'created...</td>
+      <td>https://api.xforce.ibmcloud.com/ipr/52.183.120...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>f8a7135496fd6168df5f0ea21c745db89ecea9accc29c5...</td>
+      <td>sha256_hash</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'risk': 'high', 'family': None, 'reasonDescri...</td>
+      <td>{'malware': {'origins': {'external': {'source'...</td>
+      <td>https://api.xforce.ibmcloud.com/malware/f8a713...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>cc2db822f652ca67038ba7cca8a8bde3</td>
+      <td>md5_hash</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'risk': 'high', 'family': None, 'reasonDescri...</td>
+      <td>{'malware': {'origins': {'external': {'source'...</td>
+      <td>https://api.xforce.ibmcloud.com/malware/cc2db8...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>ajaraheritage.ge</td>
+      <td>dns</td>
+      <td>None</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>{'score': 0, 'cats': None, 'categoryDescriptio...</td>
+      <td>{'result': {'url': 'ajaraheritage.ge', 'cats':...</td>
+      <td>https://api.xforce.ibmcloud.com/url/ajaraherit...</td>
+      <td>200.0</td>
+      <td>XForce</td>
+    </tr>
+    <tr>
+      <td>0</td>
+      <td>http://cic-integration.com/hjy93JNBasdas</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>http://ajaraheritage.ge/g7cberv</td>
+      <td>url</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>http://104.248.196.145/apache2</td>
+      <td>url</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': '415EE92D312FAE7ACAAC8329C2EE4...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>33.44.55.66</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': '988978A20393BAFE37D639C36922E...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>52.183.120.194</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': 'E277A374F1848BE5E04AC08D422B4...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>True</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'WatchList',...</td>
+      <td>{'IndicatorId': '745AC38B70FF24CC7DCA13BB4467D...</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>0.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>f8a7135496fd6168df5f0ea21c745db89ecea9accc29c5...</td>
+      <td>sha256_hash</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>cc2db822f652ca67038ba7cca8a8bde3</td>
+      <td>md5_hash</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>ajaraheritage.ge</td>
+      <td>dns</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>-1.0</td>
+      <td>AzSTI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Specifying-Time-Ranges">Specifying Time Ranges<a class="anchor-link" href="#Specifying-Time-Ranges"> </a></h2><p>Some providers (currently only AzSTI) support time ranges so that you can specify specific periods to search for.</p>
+<p>If a provider does not support time ranges, the parameters will be ignored</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="n">search_origin</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2019</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">q_times</span> <span class="o">=</span> <span class="n">nbwidgets</span><span class="o">.</span><span class="n">QueryTime</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s2">&quot;hour&quot;</span><span class="p">,</span> <span class="n">auto_display</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">origin_time</span><span class="o">=</span><span class="n">search_origin</span><span class="p">,</span> <span class="n">max_after</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">max_before</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="7f4d89ae-1915-48ad-aa1d-0d87f43463b6"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#7f4d89ae-1915-48ad-aa1d-0d87f43463b6');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "17e5dffd4dcb41e88a73c275b384c601", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="5fb31012-dedb-458c-b858-408f9e1929ee"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#5fb31012-dedb-458c-b858-408f9e1929ee');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "5c1d89b2165f4230a97320dc16d253ce", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="bbde817a-0017-4e8e-abc3-754886bdbca6"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#bbde817a-0017-4e8e-abc3-754886bdbca6');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "2e76923b94564277a64db3cd9dfa3053", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Using this data range returned no results</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_iocs</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ioc_ips</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="s2">&quot;AzSTI&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">q_times</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">q_times</span><span class="o">.</span><span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="4962b782-7ab1-430a-8d97-b9185b378b81"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#4962b782-7ab1-430a-8d97-b9185b378b81');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="b6fe031e-e1ba-4785-88f0-b43f74c65d59"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#b6fe031e-e1ba-4785-88f0-b43f74c65d59');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Reference</th>
+      <th>Result</th>
+      <th>Details</th>
+      <th>Status</th>
+      <th>Severity</th>
+      <th>Provider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>1.2.3.4</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>0 rows returned.</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>13.91.229.209</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>0 rows returned.</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>52.167.223.49</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>0 rows returned.</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>0 rows returned.</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>1.2.3.5</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>0 rows returned.</td>
+      <td>-1</td>
+      <td>0</td>
+      <td>AzSTI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="n">search_origin</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2019</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">q_times</span> <span class="o">=</span> <span class="n">nbwidgets</span><span class="o">.</span><span class="n">QueryTime</span><span class="p">(</span><span class="n">units</span><span class="o">=</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">auto_display</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">origin_time</span><span class="o">=</span><span class="n">search_origin</span><span class="p">,</span> <span class="n">max_after</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">max_before</span><span class="o">=</span><span class="mi">24</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="996b08eb-9e0c-44b6-b470-5a8970c2e629"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#996b08eb-9e0c-44b6-b470-5a8970c2e629');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "9d55d1adc7b04b31a33429e60f6be427", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="80b8d5db-d023-4d37-b4b0-b5862c03aea2"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#80b8d5db-d023-4d37-b4b0-b5862c03aea2');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "ca5c15f902ac4c068536b00e1d3089f8", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+ 
+ 
+<div id="27477a4c-0d3d-41af-85d4-4beca734a7f9"></div>
+<div class="output_subarea output_widget_view ">
+<script type="text/javascript">
+var element = $('#27477a4c-0d3d-41af-85d4-4beca734a7f9');
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id": "68cba20fa4104e23b4bb2ee7e5b941d7", "version_major": 2, "version_minor": 0}
+</script>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Using a wider ranges produces results</span>
+<span class="n">ti_lookup</span><span class="o">.</span><span class="n">lookup_iocs</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ioc_ips</span><span class="p">,</span> <span class="n">providers</span><span class="o">=</span><span class="s2">&quot;AzSTI&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">q_times</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">q_times</span><span class="o">.</span><span class="n">end</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="6559eb17-66f7-49fb-ac0a-afdc28bbd3ac"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#6559eb17-66f7-49fb-ac0a-afdc28bbd3ac');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+
+<div id="bcbd7bc9-4b80-48a0-9828-792fd8cc3685"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#bcbd7bc9-4b80-48a0-9828-792fd8cc3685');
+try {IPython.notebook.kernel.execute("NOTEBOOK_URL = '" + window.location + "'");} catch(err) {;}
+</script>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Ioc</th>
+      <th>IocType</th>
+      <th>QuerySubtype</th>
+      <th>Reference</th>
+      <th>Result</th>
+      <th>Status</th>
+      <th>Severity</th>
+      <th>Details</th>
+      <th>RawResult</th>
+      <th>Provider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>1.2.3.4</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>{'Action': 'alert', 'ThreatType': 'Malware', '...</td>
+      <td>{'IndicatorId': 'BF59F0493B17FFDCDA7B8D2969342...</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>13.91.229.209</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>-1.0</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>52.167.223.49</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>-1.0</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>51.75.29.61</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>-1.0</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>AzSTI</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>1.2.3.5</td>
+      <td>ipv4</td>
+      <td>None</td>
+      <td>ThreatIntelligenceIndicator  | where TimeGene...</td>
+      <td>False</td>
+      <td>-1.0</td>
+      <td>0.0</td>
+      <td>0 rows returned.</td>
+      <td>NaN</td>
+      <td>AzSTI</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+ 
+
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {"003c3a0fcdec4a69bdceebfa5da3c39c": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "05b6b5c036984a5ca457f5e46fa1bbf0": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "079ba56d0e664f0e9d9226eaf69c2dc4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query start time (UTC):", "layout": "IPY_MODEL_f15ae2c5bcd24b5ba939bb8744efa742", "style": "IPY_MODEL_fd47b314b3f34c45ae48f6e6a79d4ce4", "value": "2019-08-04 00:00:00"}}, "07dc1c9db1c74f7d927fd75b72bf0211": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "0a8a1d4729f4420d8b8a315813f70516": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "0a9d474bebb645a0ac522fcf4ced824d": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_eb688dd48b904030a0349d86817a8ae6", "style": "IPY_MODEL_735c410289cc4d3f8d3d855b8072767c", "value": "<h4>Set query time boundaries</h4>"}}, "0dbbea41ea4e4ce8a7d711ab1f7ffbd4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "120549a770d248809e6d067e222a8025": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query end time (UTC) :  ", "layout": "IPY_MODEL_6e14d6e9b9e242adbe425160af3c4b4e", "style": "IPY_MODEL_c2a7eac876084674a88613c805ff0a34", "value": "2019-08-05 10:00:00"}}, "12ed946b78b645708bcd3d466d1701cd": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "136c0e93decb45999926d3f6f996eed2": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "13d34173f63e4e038c28b8b37c3294cc": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "16c6bfc5825e4a76be94d0220cf00d0d": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "VBoxModel", "state": {"children": ["IPY_MODEL_fb5af23c66c3492cbbb52dd4f530b006", "IPY_MODEL_079ba56d0e664f0e9d9226eaf69c2dc4", "IPY_MODEL_120549a770d248809e6d067e222a8025"], "layout": "IPY_MODEL_ab2d6bd0b8624e92bb207876999189d2"}}, "1759ccb95c1548d59156a633d10648d1": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "SliderStyleModel", "state": {"description_width": "initial"}}, "20154159cd7948b2b14d517d5b52ab65": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "240a48882bb84260b53ac64eb7565564": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query start time (UTC):", "layout": "IPY_MODEL_003c3a0fcdec4a69bdceebfa5da3c39c", "style": "IPY_MODEL_4ee1e307ae0f455eabb1e749513d838a", "value": "2019-08-04 00:00:00"}}, "273570fbe69f4d69882268e0d0c670a4": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "29d89b7f8d1c428b87be26fb01965b6e": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Time (24hr)", "layout": "IPY_MODEL_6668a98b64df410fbd8bb50f30535f78", "style": "IPY_MODEL_5c763bd1c089424c9d10994bc7b2eab9", "value": "00:00:00"}}, "3004c9a065544156a891699d427416ef": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "3264c23a163c493dab30ce38e86499e9": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "359849d14e3144328e8f86911f00ebfa": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "3df1961c97d249c5be495db787162eb1": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "3fe86cfd502446f79623f08159631261": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "VBoxModel", "state": {"children": ["IPY_MODEL_8969a853b7da4fcba586705c62760333", "IPY_MODEL_b36fee10371b4df68743279980104330", "IPY_MODEL_f666a545769f4a8e9c3d89ca13f57faa"], "layout": "IPY_MODEL_504d806710fc4cbea93ceb7bde4354b6"}}, "42dc95f1050148809d5e114148090108": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_ef42573e1b0442e3b2cb22a4aa8e670c", "IPY_MODEL_5003ae2fd3a64c6c96beb73c67b79319"], "layout": "IPY_MODEL_13d34173f63e4e038c28b8b37c3294cc"}}, "45ed59d8201043afadedfc5c9730b07c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "SliderStyleModel", "state": {"description_width": "initial"}}, "46bb5ffdcd00489ab522c3dc90726f0c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "47b642a80bac4a46b3b08b5b81311796": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "4865e5c5a94f43cd9a557995dc207c78": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_49723bf43ee44e348832a8dc29876a92", "IPY_MODEL_730fa79ba38249888a24b5c35f8234f0"], "layout": "IPY_MODEL_12ed946b78b645708bcd3d466d1701cd"}}, "49723bf43ee44e348832a8dc29876a92": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DatePickerModel", "state": {"description": "Origin Date", "disabled": false, "layout": "IPY_MODEL_a23b063ee05a410ba0a1567c04965802", "style": "IPY_MODEL_359849d14e3144328e8f86911f00ebfa", "value": {"date": 5, "month": 7, "year": 2019}}}, "4ee1e307ae0f455eabb1e749513d838a": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "4f4c8bc5b61a4c26871510391345fb7d": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "5003ae2fd3a64c6c96beb73c67b79319": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Time (24hr)", "layout": "IPY_MODEL_8cc999b8b3b74a69ac2bf4cb8d765259", "style": "IPY_MODEL_4f4c8bc5b61a4c26871510391345fb7d", "value": "00:00:00"}}, "504d806710fc4cbea93ceb7bde4354b6": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "5087d672b7654d65850f9676a1801530": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "572f85ee297940a49750e46c7b4f597f": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "58495cf18f9f4f6faca10689fc0fcf3f": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "5bb0630f4bcb404ab64e84df9600644f": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Time (24hr)", "layout": "IPY_MODEL_b7ea76beb3f64a158bf3d73943d294b6", "style": "IPY_MODEL_0dbbea41ea4e4ce8a7d711ab1f7ffbd4", "value": "00:00:00"}}, "5c763bd1c089424c9d10994bc7b2eab9": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "62283ec1127a4cbfb83c1edb25d11715": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "6468c6d3c82c40a7b79cadeb08ab6808": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "6668a98b64df410fbd8bb50f30535f78": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "6cc51fa12f3445eb8a5cf82bdeb4d79b": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "SliderStyleModel", "state": {"description_width": "initial"}}, "6e14d6e9b9e242adbe425160af3c4b4e": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "730fa79ba38249888a24b5c35f8234f0": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Time (24hr)", "layout": "IPY_MODEL_5087d672b7654d65850f9676a1801530", "style": "IPY_MODEL_46bb5ffdcd00489ab522c3dc90726f0c", "value": "00:00:00"}}, "735c410289cc4d3f8d3d855b8072767c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "7deffc9fe2b0420181982844ed1bad7f": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "80%"}}, "82602f39a75f40cb97f10042f97ec9ca": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_c30c2527a0de4ad78a156384e6fa700f", "IPY_MODEL_29d89b7f8d1c428b87be26fb01965b6e"], "layout": "IPY_MODEL_3004c9a065544156a891699d427416ef"}}, "8969a853b7da4fcba586705c62760333": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "IntRangeSliderModel", "state": {"_model_name": "IntRangeSliderModel", "_view_name": "IntRangeSliderView", "description": "Time Range (day):", "layout": "IPY_MODEL_f90130655f2e4726915bf66c3d65bcd4", "max": 24, "min": -24, "style": "IPY_MODEL_1759ccb95c1548d59156a633d10648d1", "value": [-24, 10]}}, "8cc999b8b3b74a69ac2bf4cb8d765259": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "8d36472917504abdbbf2011a4428877f": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "91691bbb1d6a4add8afada9421e44c7b": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query end time (UTC) :  ", "layout": "IPY_MODEL_0a8a1d4729f4420d8b8a315813f70516", "style": "IPY_MODEL_6468c6d3c82c40a7b79cadeb08ab6808", "value": "2019-08-05 10:00:00"}}, "940857769ae044978daa9b8b213c6276": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "96c0d83fd16d4d918dd17a6cdf85f5b4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "VBoxModel", "state": {"children": ["IPY_MODEL_c8ebef983dc643568461804dcd74e786", "IPY_MODEL_b8748b8449a84207887e472ae78c9834", "IPY_MODEL_d5e16c25aefe4123ab25ba066ad7e44b"], "layout": "IPY_MODEL_62283ec1127a4cbfb83c1edb25d11715"}}, "9867a8883aa14204b0c15442c9a718b6": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "9dcb837cd28645a0a59f3277ebf56554": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "9e918414dd194e3da63327eb845f6227": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "VBoxModel", "state": {"children": ["IPY_MODEL_c662373483914cd8a3db954e16ee4a41", "IPY_MODEL_240a48882bb84260b53ac64eb7565564", "IPY_MODEL_91691bbb1d6a4add8afada9421e44c7b"], "layout": "IPY_MODEL_9867a8883aa14204b0c15442c9a718b6"}}, "a23b063ee05a410ba0a1567c04965802": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ab2d6bd0b8624e92bb207876999189d2": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ac55840adf604ed084a5dabb223212cd": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "aca7bfa2809b4304a6fe8df8822c7ad6": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ae1b8440c7ed4519ac0d3249a0b26e68": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "b36fee10371b4df68743279980104330": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query start time (UTC):", "layout": "IPY_MODEL_9dcb837cd28645a0a59f3277ebf56554", "style": "IPY_MODEL_e9dba725274d44c2a7276ab0fad0ed5c", "value": "2019-07-12 00:00:00"}}, "b7ea76beb3f64a158bf3d73943d294b6": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "b8748b8449a84207887e472ae78c9834": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query start time (UTC):", "layout": "IPY_MODEL_572f85ee297940a49750e46c7b4f597f", "style": "IPY_MODEL_bb1a9333b22542a2a67f40bc49c7af85", "value": "2019-07-12 00:00:00"}}, "bb1a9333b22542a2a67f40bc49c7af85": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "c2a7eac876084674a88613c805ff0a34": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "c30c2527a0de4ad78a156384e6fa700f": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DatePickerModel", "state": {"description": "Origin Date", "disabled": false, "layout": "IPY_MODEL_c617cb66a15d463b937d57e255e72657", "style": "IPY_MODEL_05b6b5c036984a5ca457f5e46fa1bbf0", "value": {"date": 5, "month": 7, "year": 2019}}}, "c617cb66a15d463b937d57e255e72657": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "c662373483914cd8a3db954e16ee4a41": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "IntRangeSliderModel", "state": {"_model_name": "IntRangeSliderModel", "_view_name": "IntRangeSliderView", "description": "Time Range (hour):", "layout": "IPY_MODEL_e797cb4cd4534f29add8b4103d71ff11", "max": 24, "min": -24, "style": "IPY_MODEL_f8d9f216bd6f4d7da53e51627a1bfc83", "value": [-24, 10]}}, "c8ebef983dc643568461804dcd74e786": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "IntRangeSliderModel", "state": {"_model_name": "IntRangeSliderModel", "_view_name": "IntRangeSliderView", "description": "Time Range (day):", "layout": "IPY_MODEL_dc52e9bf91504837a0115f834bd57aa8", "max": 24, "min": -24, "style": "IPY_MODEL_45ed59d8201043afadedfc5c9730b07c", "value": [-24, 10]}}, "cc26184d7517449b83f495eb7589abe2": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "d36a0d42126d4fdc85813258a5911add": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DatePickerModel", "state": {"description": "Origin Date", "disabled": false, "layout": "IPY_MODEL_aca7bfa2809b4304a6fe8df8822c7ad6", "style": "IPY_MODEL_136c0e93decb45999926d3f6f996eed2", "value": {"date": 5, "month": 7, "year": 2019}}}, "d471459efea243f4bbadb38036dec52c": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "d5e16c25aefe4123ab25ba066ad7e44b": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query end time (UTC) :  ", "layout": "IPY_MODEL_3264c23a163c493dab30ce38e86499e9", "style": "IPY_MODEL_940857769ae044978daa9b8b213c6276", "value": "2019-08-15 00:00:00"}}, "d9d4c0b9f2d24b75ae4a684f235a8ac2": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_d36a0d42126d4fdc85813258a5911add", "IPY_MODEL_5bb0630f4bcb404ab64e84df9600644f"], "layout": "IPY_MODEL_58495cf18f9f4f6faca10689fc0fcf3f"}}, "db5fd4e8a9be43adac6bbed42327af53": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_20154159cd7948b2b14d517d5b52ab65", "style": "IPY_MODEL_ac55840adf604ed084a5dabb223212cd", "value": "<h4>Set query time boundaries</h4>"}}, "dc52e9bf91504837a0115f834bd57aa8": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "80%"}}, "e797cb4cd4534f29add8b4103d71ff11": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "80%"}}, "e9dba725274d44c2a7276ab0fad0ed5c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}, "eb688dd48b904030a0349d86817a8ae6": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ef42573e1b0442e3b2cb22a4aa8e670c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DatePickerModel", "state": {"description": "Origin Date", "disabled": false, "layout": "IPY_MODEL_273570fbe69f4d69882268e0d0c670a4", "style": "IPY_MODEL_ae1b8440c7ed4519ac0d3249a0b26e68", "value": {"date": 5, "month": 7, "year": 2019}}}, "f12ece441b4641abbc8f83ffdd9427a7": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_d471459efea243f4bbadb38036dec52c", "style": "IPY_MODEL_8d36472917504abdbbf2011a4428877f", "value": "<h4>Set query time boundaries</h4>"}}, "f15ae2c5bcd24b5ba939bb8744efa742": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "50%"}}, "f666a545769f4a8e9c3d89ca13f57faa": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "TextModel", "state": {"description": "Query end time (UTC) :  ", "layout": "IPY_MODEL_47b642a80bac4a46b3b08b5b81311796", "style": "IPY_MODEL_cc26184d7517449b83f495eb7589abe2", "value": "2019-08-15 00:00:00"}}, "f8d9f216bd6f4d7da53e51627a1bfc83": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "SliderStyleModel", "state": {"description_width": "initial"}}, "f8f081269f9e4d3b9bb8aed7ac683aab": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_3df1961c97d249c5be495db787162eb1", "style": "IPY_MODEL_07dc1c9db1c74f7d927fd75b72bf0211", "value": "<h4>Set query time boundaries</h4>"}}, "f90130655f2e4726915bf66c3d65bcd4": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {"width": "80%"}}, "fb5af23c66c3492cbbb52dd4f530b006": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "IntRangeSliderModel", "state": {"_model_name": "IntRangeSliderModel", "_view_name": "IntRangeSliderView", "description": "Time Range (hour):", "layout": "IPY_MODEL_7deffc9fe2b0420181982844ed1bad7f", "max": 24, "min": -24, "style": "IPY_MODEL_6cc51fa12f3445eb8a5cf82bdeb4d79b", "value": [-24, 10]}}, "fd47b314b3f34c45ae48f6e6a79d4ce4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": "initial"}}}, "version_major": 2, "version_minor": 0}
+</script>
+
+
+    </main>
+    

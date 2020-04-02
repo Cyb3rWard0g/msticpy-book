@@ -1,0 +1,1934 @@
+---
+redirect_from:
+  - "/notebooks/iocextract"
+interact_link: content/notebooks/IoCExtract.ipynb
+kernel_name: conda-env-condadev-py
+kernel_path: content/notebooks
+has_widgets: false
+title: |-
+  Title: msticpy - IoC Extraction
+pagenum: 13
+prev_page:
+  url: /notebooks/GeoIPLookups.html
+next_page:
+  url: /notebooks/MDATPQuery.html
+suffix: .ipynb
+search: ioc dataframe extract input default string id toc contents data type optional match patterns results column types pattern parameter columns ioctype priority ioctypes sourceindex index search iocs regex set expression str none dns source list magic iocextractor method merge parameters used windowspath linuxpath matches pandas using observable supports variable class allows built new looking cmdlineiocs dataframeiocs api iocextractapi predefined regexpatterns adding own s addingpatterns extractmethod mergeresults pass whole regular highest group notes same substring assigned strings matching specified includepaths any observables return dictionary following different row ipv shahash extractdf where output note need numeric dtype cell extension title msticpy extraction
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">Title: msticpy - IoC Extraction</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Description:">Description:<a class="anchor-link" href="#Description:"> </a></h2><p>This class allows you to extract IoC patterns from a string or a DataFrame.
+Several patterns are built in to the class and you can override these or supply new ones.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='toc'></a></p>
+<h2 id="Table-of-Contents">Table of Contents<a class="anchor-link" href="#Table-of-Contents"> </a></h2><ul>
+<li><a href="#cmdlineiocs">Looking for IoC in a String</a></li>
+<li><a href="#dataframeiocs">Search DataFrame for IoCs</a></li>
+<li><a href="#iocextractapi">IoCExtractor API</a><ul>
+<li><a href="#regexpatterns">Predefined Regex Patterns</a></li>
+<li><a href="#addingpatterns">Adding your own pattern(s)</a></li>
+<li><a href="#extractmethod">extract() method</a></li>
+<li><a href="#mergeresults">Merge the results with the input DataFrame</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Imports</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">MIN_REQ_PYTHON</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Check the Kernel-&gt;Change Kernel menu and ensure that Python 3.6&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;or later is selected as the active kernel.&#39;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Python </span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2"> or later is required.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">IPython</span> <span class="kn">import</span> <span class="n">get_ipython</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_rows&#39;</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_columns&#39;</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_colwidth&#39;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Load test data</span>
+<span class="n">process_tree</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;data/process_tree.csv&#39;</span><span class="p">)</span>
+<span class="n">process_tree</span><span class="p">[[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CommandLine</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>.\ftp  -s:C:\RECYCLER\xxppyy.exe</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>.\reg  not /domain:everything that /sid:shines is /krbtgt:golden !</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>cmd  /c "systeminfo &amp;&amp; systeminfo"</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>.\rundll32  /C 12345.exe</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>.\rundll32  /C c:\users\MSTICAdmin\12345.exe</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='cmdlineiocs'></a><a href="#toc">Contents</a></p>
+<h2 id="Looking-for-IoC-in-a-String">Looking for IoC in a String<a class="anchor-link" href="#Looking-for-IoC-in-a-String"> </a></h2><p>Here we:</p>
+<ul>
+<li>Get a commandline from our data set.</li>
+<li>Pass it to the IoC Extractor</li>
+<li>View the results</li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># get a commandline from our data set</span>
+<span class="n">cmdline</span> <span class="o">=</span> <span class="n">process_tree</span><span class="p">[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">78</span><span class="p">]</span>
+<span class="n">cmdline</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39;netsh  start capture=yes IPv4.Address=1.2.3.4 tracefile=C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\bzzzzzz.txt&#39;</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Instantiate an IoCExtract object</span>
+<span class="kn">from</span> <span class="nn">msticpy.sectools</span> <span class="kn">import</span> <span class="n">IoCExtract</span>
+<span class="n">ioc_extractor</span> <span class="o">=</span> <span class="n">IoCExtract</span><span class="p">()</span>
+
+<span class="c1"># any IoCs in the string?</span>
+<span class="n">iocs_found</span> <span class="o">=</span> <span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">cmdline</span><span class="p">)</span>
+    
+<span class="k">if</span> <span class="n">iocs_found</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Potential IoCs found in alert process:&#39;</span><span class="p">)</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">iocs_found</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+Potential IoCs found in alert process:
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea ">
+<pre>defaultdict(set,
+            {&#39;ipv4&#39;: {&#39;1.2.3.4&#39;},
+             &#39;windows_path&#39;: {&#39;C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\bzzzzzz.txt&#39;}})</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='dataframeiocs'></a><a href="#toc">Contents</a></p>
+<h2 id="If-we-have-a-DataFrame,-look-for-IoCs-in-the-whole-data-set">If we have a DataFrame, look for IoCs in the whole data set<a class="anchor-link" href="#If-we-have-a-DataFrame,-look-for-IoCs-in-the-whole-data-set"> </a></h2><p>You can replace the <code>data=</code> parameter to ioc_extractor.extract() to pass other data frames.
+Use the <code>columns</code> parameter to specify which column or columns that you want to search.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ioc_extractor</span> <span class="o">=</span> <span class="n">IoCExtract</span><span class="p">()</span>
+<span class="n">ioc_df</span> <span class="o">=</span> <span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">process_tree</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span>
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ioc_df</span><span class="p">):</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s2">&quot;&lt;h3&gt;IoC patterns found in process tree.&lt;/h3&gt;&quot;</span><span class="p">))</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">ioc_df</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<h3>IoC patterns found in process tree.</h3>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dns</td>
+      <td>microsoft.com</td>
+      <td>24</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>url</td>
+      <td>http://server/file.sct</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dns</td>
+      <td>server</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>dns</td>
+      <td>evil.ps</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>url</td>
+      <td>http://somedomain/best-kitten-names-1.jpg'</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>dns</td>
+      <td>somedomain</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>md5_hash</td>
+      <td>81ed03caf6901e444c72ac67d192fb9c</td>
+      <td>44</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>url</td>
+      <td>http://badguyserver/pwnme</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>dns</td>
+      <td>badguyserver</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>url</td>
+      <td>http://badguyserver/pwnme</td>
+      <td>47</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>dns</td>
+      <td>badguyserver</td>
+      <td>47</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>dns</td>
+      <td>Invoke-Shellcode.ps</td>
+      <td>48</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>dns</td>
+      <td>Invoke-ReverseDnsLookup.ps</td>
+      <td>49</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>dns</td>
+      <td>Wscript.Shell</td>
+      <td>67</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>url</td>
+      <td>http://system.management.automation.amsiutils').getfield('amsiinitfailed','nonpublic,static').se...</td>
+      <td>77</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>dns</td>
+      <td>system.management.automation.amsiutils').getfield('amsiinitfailed','nonpublic,static').setvalue(...</td>
+      <td>77</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>ipv4</td>
+      <td>1.2.3.4</td>
+      <td>78</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>dns</td>
+      <td>wscript.shell</td>
+      <td>81</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>dns</td>
+      <td>abc.com</td>
+      <td>90</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>ipv4</td>
+      <td>127.0.0.1</td>
+      <td>102</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>url</td>
+      <td>http://127.0.0.1/</td>
+      <td>102</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='iocextractapi'></a><a href="#toc">Contents</a></p>
+<h2 id="IoCExtractor-API">IoCExtractor API<a class="anchor-link" href="#IoCExtractor-API"> </a></h2>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># IoCExtract docstring</span>
+ioc_extractor.extract<span class="o">?</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='regexpatterns'></a><a href="#toc">Contents</a></p>
+<h3 id="Predefined-Regex-Patterns">Predefined Regex Patterns<a class="anchor-link" href="#Predefined-Regex-Patterns"> </a></h3>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">html</span> <span class="kn">import</span> <span class="n">escape</span>
+<span class="n">extractor</span> <span class="o">=</span> <span class="n">IoCExtract</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">ioc_type</span><span class="p">,</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">extractor</span><span class="o">.</span><span class="n">ioc_types</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">esc_pattern</span> <span class="o">=</span> <span class="n">escape</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">comp_regex</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;b&gt;</span><span class="si">{ioc_type}</span><span class="s1">&lt;/b&gt;&#39;</span><span class="p">))</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;div style=&quot;margin-left:20px&quot;&gt;&lt;pre&gt;</span><span class="si">{esc_pattern}</span><span class="s1">&lt;/pre&gt;&lt;/div&gt;&#39;</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>ipv4</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?P&lt;ipaddress&gt;(?:[0-9]{1,3}\.){3}[0-9]{1,3})</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>ipv6</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?&lt;![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>dns</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>((?=[a-z0-9-]{1,63}\.)[a-z0-9]+(-[a-z0-9]+)*\.){1,126}[a-z]{2,63}</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>url</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?P&lt;protocol&gt;(https?|ftp|telnet|ldap|file)://)
+            (?P&lt;userinfo&gt;([a-z0-9-._~!$&amp;\&#x27;()*+,;=:]|%[0-9A-F]{2})*@)?
+            (?P&lt;host&gt;([a-z0-9-._~!$&amp;\&#x27;()*+,;=]|%[0-9A-F]{2})*)
+            (:(?P&lt;port&gt;\d*))?
+            (/(?P&lt;path&gt;([^?\#&quot;&lt;&gt;\s]|%[0-9A-F]{2})*/?))?
+            (\?(?P&lt;query&gt;([a-z0-9-._~!$&amp;&#x27;()*+,;=:/?@]|%[0-9A-F]{2})*))?
+            (\#(?P&lt;fragment&gt;([a-z0-9-._~!$&amp;&#x27;()*+,;=:/?@]|%[0-9A-F]{2})*))?</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>windows_path</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?P&lt;root&gt;[a-z]:|\\\\[a-z0-9_.$-]+||[.]+)
+            (?P&lt;folder&gt;\\(?:[^\/:*?&quot;\&#x27;&lt;&gt;|\r\n]+\\)*)
+            (?P&lt;file&gt;[^\\/*?&quot;&quot;&lt;&gt;|\r\n ]+)</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>linux_path</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?P&lt;root&gt;/+||[.]+)
+            (?P&lt;folder&gt;/(?:[^\\/:*?&lt;&gt;|\r\n]+/)*)
+            (?P&lt;file&gt;[^/\0&lt;&gt;|\r\n ]+)</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>md5_hash</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?:^|[^A-Fa-f0-9])(?P&lt;hash&gt;[A-Fa-f0-9]{32})(?:$|[^A-Fa-f0-9])</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>sha1_hash</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?:^|[^A-Fa-f0-9])(?P&lt;hash&gt;[A-Fa-f0-9]{40})(?:$|[^A-Fa-f0-9])</pre></div>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<b>sha256_hash</b>
+</div>
+
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea ">
+<div style="margin-left:20px"><pre>(?:^|[^A-Fa-f0-9])(?P&lt;hash&gt;[A-Fa-f0-9]{64})(?:$|[^A-Fa-f0-9])</pre></div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='addingpatterns'></a><a href="#toc">Contents</a></p>
+<h3 id="Adding-your-own-pattern(s)">Adding your own pattern(s)<a class="anchor-link" href="#Adding-your-own-pattern(s)"> </a></h3><p>Docstring:</p>
+
+<pre><code>Add an IoC type and regular expression to use to the built-in set.
+
+Parameters
+----------
+ioc_type : str
+    A unique name for the IoC type
+ioc_regex : str
+    A regular expression used to search for the type
+priority : int, optional
+    Priority of the regex match vs. other ioc_patterns. 0 is
+    the highest priority (the default is 0).
+group : str, optional
+    The regex group to match (the default is None,
+    which will match on the whole expression)
+
+Notes
+-----
+Pattern priorities.
+    If two IocType patterns match on the same substring, the matched
+    substring is assigned to the pattern/IocType with the highest
+    priority. E.g. `foo.bar.com` will match types: `dns`, `windows_path`
+    and `linux_path` but since `dns` has a higher priority, the expression
+    is assigned to the `dns` matches.</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="n">rcomp</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?P&lt;pipe&gt;</span><span class="se">\\\\</span><span class="s1">\.</span><span class="se">\\</span><span class="s1">pipe</span><span class="se">\\</span><span class="s1">[^\s</span><span class="se">\\</span><span class="s1">]+)&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">extractor</span><span class="o">.</span><span class="n">add_ioc_type</span><span class="p">(</span><span class="n">ioc_type</span><span class="o">=</span><span class="s1">&#39;win_named_pipe&#39;</span><span class="p">,</span> <span class="n">ioc_regex</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;(?P&lt;pipe&gt;</span><span class="se">\\\\</span><span class="s1">\.</span><span class="se">\\</span><span class="s1">pipe</span><span class="se">\\</span><span class="s1">[^\s</span><span class="se">\\</span><span class="s1">]+)&#39;</span><span class="p">)</span>
+
+<span class="c1"># Check that it added ok</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">extractor</span><span class="o">.</span><span class="n">ioc_types</span><span class="p">[</span><span class="s1">&#39;win_named_pipe&#39;</span><span class="p">])</span>
+
+<span class="c1"># Use it in our data set</span>
+<span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">process_tree</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s1">&#39;IoCType == </span><span class="se">\&#39;</span><span class="s1">win_named_pipe</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>IoCPattern(ioc_type=&#39;win_named_pipe&#39;, comp_regex=re.compile(&#39;(?P&lt;pipe&gt;\\\\\\\\\\.\\\\pipe\\\\[^\\s\\\\]+)&#39;, re.IGNORECASE|re.MULTILINE|re.VERBOSE), priority=0, group=None)
+</pre>
+</div>
+</div>
+</div>
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>25</th>
+      <td>win_named_pipe</td>
+      <td>\\.\pipe\blahtest"</td>
+      <td>107</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='extractmethod'></a><a href="#toc">Contents</a></p>
+<h3 id="extract()-method">extract() method<a class="anchor-link" href="#extract()-method"> </a></h3>
+<pre><code>Parameters
+----------
+src : str, optional
+    source string in which to look for IoC patterns
+    (the default is None)
+data : pd.DataFrame, optional
+    input DataFrame from which to read source strings
+    (the default is None)
+columns : list, optional
+    The list of columns to use as source strings,
+    if the `data` parameter is used. (the default is None)
+
+Other Parameters
+----------------
+ioc_types : list, optional
+    Restrict matching to just specified types.
+    (default is all types)
+include_paths : bool, optional
+    Whether to include path matches (which can be noisy)
+    (the default is false - excludes 'windows_path'
+    and 'linux_path'). If `ioc_types` is specified
+    this parameter is ignored.
+
+Returns
+-------
+Any
+    dict of found observables (if input is a string) or
+    DataFrame of observables
+
+Notes
+-----
+Extract takes either a string or a pandas DataFrame as input.
+When using the string option as an input extract will
+return a dictionary of results.
+When using a DataFrame the results will be returned as a new
+DataFrame with the following columns:
+- IoCType: the mnemonic used to distinguish different IoC Types
+- Observable: the actual value of the observable
+- SourceIndex: the index of the row in the input DataFrame from
+which the source for the IoC observable was extracted.
+
+IoCType Pattern selection
+The default list is:  ['ipv4', 'ipv6', 'dns', 'url',
+'md5_hash', 'sha1_hash', 'sha256_hash'] plus any
+user-defined types.
+'windows_path', 'linux_path' are excluded unless `include_paths`
+is True or explicitly included in `ioc_paths`.</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># You can specify multiple columns</span>
+<span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">process_tree</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;NewProcessName&#39;</span><span class="p">,</span> <span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dns</td>
+      <td>microsoft.com</td>
+      <td>24</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>url</td>
+      <td>http://server/file.sct</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dns</td>
+      <td>server</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>dns</td>
+      <td>evil.ps</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>url</td>
+      <td>http://somedomain/best-kitten-names-1.jpg'</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>dns</td>
+      <td>somedomain</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>41</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="extract_df()">extract_df()<a class="anchor-link" href="#extract_df()"> </a></h3><p><code>extract_df</code> functions identically to <code>extract</code> with a <code>data</code> parameter.
+It may be more convenient to use this when you know that your
+input is a DataFrame</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract_df</span><span class="p">(</span><span class="n">process_tree</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;NewProcessName&#39;</span><span class="p">,</span> <span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dns</td>
+      <td>microsoft.com</td>
+      <td>24</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>url</td>
+      <td>http://server/file.sct</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dns</td>
+      <td>server</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>dns</td>
+      <td>evil.ps</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>url</td>
+      <td>http://somedomain/best-kitten-names-1.jpg'</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>dns</td>
+      <td>somedomain</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>41</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='mergeresults'></a><a href="#toc">Contents</a></p>
+<h3 id="SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame">SourceIndex column allows you to merge the results with the input DataFrame<a class="anchor-link" href="#SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame"> </a></h3><p>Where an input row has multiple IoC matches the output of this merge will result in duplicate rows from the input (one per IoC match). The previous index is preserved in the second column (and in the SourceIndex column).</p>
+<p>Note: you will need to set the type of the SourceIndex column. In the example below case we are matching with the default numeric index so we force the type to be numeric. In cases where you are using an index of a different dtype you will need to convert the SourceIndex (dtype=object) to match the type of your index column.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">input_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">=</span><span class="n">process_tree</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">output_df</span> <span class="o">=</span> <span class="n">ioc_extractor</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">input_df</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;NewProcessName&#39;</span><span class="p">,</span> <span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span>
+<span class="c1"># set the type of the SourceIndex column. In this case we are matching with the default numeric index.</span>
+<span class="n">output_df</span><span class="p">[</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">output_df</span><span class="p">[</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">])</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="n">input_df</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="n">output_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;outer&#39;</span><span class="p">,</span> <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">)</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Unnamed: 0</th>
+      <th>TenantId</th>
+      <th>Account</th>
+      <th>EventID</th>
+      <th>TimeGenerated</th>
+      <th>Computer</th>
+      <th>SubjectUserSid</th>
+      <th>SubjectUserName</th>
+      <th>SubjectDomainName</th>
+      <th>SubjectLogonId</th>
+      <th>NewProcessId</th>
+      <th>NewProcessName</th>
+      <th>TokenElevationType</th>
+      <th>ProcessId</th>
+      <th>CommandLine</th>
+      <th>ParentProcessName</th>
+      <th>TargetLogonId</th>
+      <th>SourceComputerId</th>
+      <th>TimeCreatedUtc</th>
+      <th>NodeRole</th>
+      <th>Level</th>
+      <th>ProcessId1</th>
+      <th>NewProcessId1</th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:15.677</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x1580</td>
+      <td>C:\Diagnostics\UserTmp\ftp.exe</td>
+      <td>%%1936</td>
+      <td>0xbc8</td>
+      <td>.\ftp  -s:C:\RECYCLER\xxppyy.exe</td>
+      <td>C:\Windows\System32\cmd.exe</td>
+      <td>0x0</td>
+      <td>46fe7078-61bb-4bed-9430-7ac01d91c273</td>
+      <td>2019-01-15 05:15:15.677</td>
+      <td>source</td>
+      <td>0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:16.167</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x16fc</td>
+      <td>C:\Diagnostics\UserTmp\reg.exe</td>
+      <td>%%1936</td>
+      <td>0xbc8</td>
+      <td>.\reg  not /domain:everything that /sid:shines is /krbtgt:golden !</td>
+      <td>C:\Windows\System32\cmd.exe</td>
+      <td>0x0</td>
+      <td>46fe7078-61bb-4bed-9430-7ac01d91c273</td>
+      <td>2019-01-15 05:15:16.167</td>
+      <td>sibling</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:16.277</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x1700</td>
+      <td>C:\Diagnostics\UserTmp\cmd.exe</td>
+      <td>%%1936</td>
+      <td>0xbc8</td>
+      <td>cmd  /c "systeminfo &amp;&amp; systeminfo"</td>
+      <td>C:\Windows\System32\cmd.exe</td>
+      <td>0x0</td>
+      <td>46fe7078-61bb-4bed-9430-7ac01d91c273</td>
+      <td>2019-01-15 05:15:16.277</td>
+      <td>sibling</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:16.340</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x1728</td>
+      <td>C:\Diagnostics\UserTmp\rundll32.exe</td>
+      <td>%%1936</td>
+      <td>0xbc8</td>
+      <td>.\rundll32  /C 12345.exe</td>
+      <td>C:\Windows\System32\cmd.exe</td>
+      <td>0x0</td>
+      <td>46fe7078-61bb-4bed-9430-7ac01d91c273</td>
+      <td>2019-01-15 05:15:16.340</td>
+      <td>sibling</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:16.400</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x175c</td>
+      <td>C:\Diagnostics\UserTmp\rundll32.exe</td>
+      <td>%%1936</td>
+      <td>0xbc8</td>
+      <td>.\rundll32  /C c:\users\MSTICAdmin\12345.exe</td>
+      <td>C:\Windows\System32\cmd.exe</td>
+      <td>0x0</td>
+      <td>46fe7078-61bb-4bed-9430-7ac01d91c273</td>
+      <td>2019-01-15 05:15:16.400</td>
+      <td>sibling</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>4</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="IPython-magic">IPython magic<a class="anchor-link" href="#IPython-magic"> </a></h2><p>You can use the line magic <code>%ioc</code> or cell magic <code>%%ioc</code> to extract IoCs from text pasted directly into a cell</p>
+<p>The ioc magic supports the following options:</p>
+
+<pre><code>--out OUT, -o OUT  
+    The variable to return the results in the variable `OUT`
+    Note: the output variable is a dictionary iocs grouped by IoC Type
+--ioc_types IOC_TYPES, -i IOC_TYPES
+    The types of IoC to search for (comma-separated string)</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">ioc</span> --out ioc_capture
+netsh  start capture=yes IPv4.Address=1.2.3.4 tracefile=C:\Users\user\AppData\Local\Temp\bzzzzzz.txt
+hostname	customers-service.ddns.net		Feb 5, 2020, 2:20:35 PM		7	
+URL	https://two-step-checkup.site/securemail/secureLogin/challenge/url?ucode=d50a3eb1-9a6b-45a8-8389-d5203bbddaa1&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;service=mailservice&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;type=password		Feb 5, 2020, 2:20:35 PM		1	
+hostname	mobile.phonechallenges-submit.site		Feb 5, 2020, 2:20:35 PM		8	
+hostname	youtube.service-activity-checkup.site		Feb 5, 2020, 2:20:35 PM		8	
+hostname	www.drive-accounts.com		Feb 5, 2020, 2:20:35 PM		7	
+hostname	google.drive-accounts.com		Feb 5, 2020, 2:20:35 PM		7	
+domain	niaconucil.org		Feb 5, 2020, 2:20:35 PM		11	
+domain	isis-online.net		Feb 5, 2020, 2:20:35 PM		11	
+domain	bahaius.info		Feb 5, 2020, 2:20:35 PM		11	
+domain	w3-schools.org		Feb 5, 2020, 2:20:35 PM		12	
+domain	system-services.site		Feb 5, 2020, 2:20:35 PM		11	
+domain	accounts-drive.com		Feb 5, 2020, 2:20:35 PM		8	
+domain	drive-accounts.com		Feb 5, 2020, 2:20:35 PM		10	
+domain	service-issues.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	two-step-checkup.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	customers-activities.site		Feb 5, 2020, 2:20:35 PM		11	
+domain	seisolarpros.org		Feb 5, 2020, 2:20:35 PM		11	
+domain	yah00.site		Feb 5, 2020, 2:20:35 PM		4	
+domain	skynevvs.com		Feb 5, 2020, 2:20:35 PM		11	
+domain	recovery-options.site		Feb 5, 2020, 2:20:35 PM		4	
+domain	malcolmrifkind.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	instagram-com.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	leslettrespersanes.net		Feb 5, 2020, 2:20:35 PM		11	
+domain	software-updating-managers.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	cpanel-services.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	service-activity-checkup.site		Feb 5, 2020, 2:20:35 PM		7	
+domain	inztaqram.ga		Feb 5, 2020, 2:20:35 PM		8	
+domain	unirsd.com		Feb 5, 2020, 2:20:35 PM		8	
+domain	phonechallenges-submit.site		Feb 5, 2020, 2:20:35 PM		7	
+domain	acconut-verify.com		Feb 5, 2020, 2:20:35 PM		11	
+domain	finance-usbnc.info		Feb 5, 2020, 2:20:35 PM		8	
+FileHash-MD5	542128ab98bda5ea139b169200a50bce		Feb 5, 2020, 2:20:35 PM		3	
+FileHash-MD5	3d67ce57aab4f7f917cf87c724ed7dab		Feb 5, 2020, 2:20:35 PM		3	
+hostname	x09live-ix3b.account-profile-users.info		Feb 6, 2020, 2:56:07 PM		0	
+hostname	www.phonechallenges-submit.site		Feb 6, 2020, 2:56:07 PM
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[(&#39;ipv4&#39;, [&#39;1.2.3.4&#39;]),
+ (&#39;dns&#39;,
+  [&#39;malcolmrifkind.site&#39;,
+   &#39;w3-schools.org&#39;,
+   &#39;niaconucil.org&#39;,
+   &#39;software-updating-managers.site&#39;,
+   &#39;isis-online.net&#39;,
+   &#39;accounts-drive.com&#39;,
+   &#39;cpanel-services.site&#39;,
+   &#39;service-activity-checkup.site&#39;,
+   &#39;service-issues.site&#39;,
+   &#39;recovery-options.site&#39;,
+   &#39;instagram-com.site&#39;,
+   &#39;mobile.phonechallenges-submit.site&#39;,
+   &#39;youtube.service-activity-checkup.site&#39;,
+   &#39;google.drive-accounts.com&#39;,
+   &#39;phonechallenges-submit.site&#39;,
+   &#39;drive-accounts.com&#39;,
+   &#39;www.phonechallenges-submit.site&#39;,
+   &#39;yah00.site&#39;,
+   &#39;seisolarpros.org&#39;,
+   &#39;customers-activities.site&#39;,
+   &#39;bahaius.info&#39;,
+   &#39;system-services.site&#39;,
+   &#39;two-step-checkup.site&#39;,
+   &#39;x09live-ix3b.account-profile-users.info&#39;,
+   &#39;customers-service.ddns.net&#39;,
+   &#39;leslettrespersanes.net&#39;,
+   &#39;www.drive-accounts.com&#39;,
+   &#39;acconut-verify.com&#39;,
+   &#39;finance-usbnc.info&#39;,
+   &#39;unirsd.com&#39;,
+   &#39;skynevvs.com&#39;,
+   &#39;inztaqram.ga&#39;]),
+ (&#39;url&#39;,
+  [&#39;https://two-step-checkup.site/securemail/secureLogin/challenge/url?ucode=d50a3eb1-9a6b-45a8-8389-d5203bbddaa1&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;service=mailservice&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;type=password&#39;]),
+ (&#39;windows_path&#39;, [&#39;C:\\Users\\user\\AppData\\Local\\Temp\\bzzzzzz.txt&#39;]),
+ (&#39;linux_path&#39;,
+  [&#39;//two-step-checkup.site/securemail/secureLogin/challenge/url?ucode=d50a3eb1-9a6b-45a8-8389-d5203bbddaa1&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;service=mailservice&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;type=password\t\tFeb&#39;]),
+ (&#39;md5_hash&#39;,
+  [&#39;3d67ce57aab4f7f917cf87c724ed7dab&#39;, &#39;542128ab98bda5ea139b169200a50bce&#39;])]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Summarize captured types</span>
+<span class="nb">print</span><span class="p">([(</span><span class="n">ioc</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">))</span> <span class="k">for</span> <span class="n">ioc</span><span class="p">,</span> <span class="n">matches</span> <span class="ow">in</span> <span class="n">ioc_capture</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[(&#39;ipv4&#39;, 1), (&#39;dns&#39;, 32), (&#39;url&#39;, 1), (&#39;windows_path&#39;, 1), (&#39;linux_path&#39;, 1), (&#39;md5_hash&#39;, 2)]
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">ioc</span> --ioc_types &quot;ipv4, ipv6, linux_path, md5_hash&quot;
+netsh  start capture=yes IPv4.Address=1.2.3.4 tracefile=C:\Users\user\AppData\Local\Temp\bzzzzzz.txt
+tracefile2=/usr/localbzzzzzz.sh
+hostname	customers-service.ddns.net		Feb 5, 2020, 2:20:35 PM		7	
+URL	https://two-step-checkup.site/securemail/secureLogin/challenge/url?ucode=d50a3eb1-9a6b-45a8-8389-d5203bbddaa1&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;service=mailservice&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;type=password		Feb 5, 2020, 2:20:35 PM		1	
+hostname	mobile.phonechallenges-submit.site		Feb 5, 2020, 2:20:35 PM		8	
+hostname	youtube.service-activity-checkup.site		Feb 5, 2020, 2:20:35 PM		8	
+hostname	www.drive-accounts.com		Feb 5, 2020, 2:20:35 PM		7	
+hostname	google.drive-accounts.com		Feb 5, 2020, 2:20:35 PM		7	
+domain	niaconucil.org		Feb 5, 2020, 2:20:35 PM		11	
+domain	isis-online.net		Feb 5, 2020, 2:20:35 PM		11	
+domain	bahaius.info		Feb 5, 2020, 2:20:35 PM		11	
+domain	w3-schools.org		Feb 5, 2020, 2:20:35 PM		12	
+domain	system-services.site		Feb 5, 2020, 2:20:35 PM		11	
+domain	accounts-drive.com		Feb 5, 2020, 2:20:35 PM		8	
+domain	drive-accounts.com		Feb 5, 2020, 2:20:35 PM		10	
+domain	service-issues.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	two-step-checkup.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	customers-activities.site		Feb 5, 2020, 2:20:35 PM		11	
+domain	seisolarpros.org		Feb 5, 2020, 2:20:35 PM		11	
+domain	yah00.site		Feb 5, 2020, 2:20:35 PM		4	
+domain	skynevvs.com		Feb 5, 2020, 2:20:35 PM		11	
+domain	recovery-options.site		Feb 5, 2020, 2:20:35 PM		4	
+domain	malcolmrifkind.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	instagram-com.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	leslettrespersanes.net		Feb 5, 2020, 2:20:35 PM		11	
+domain	software-updating-managers.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	cpanel-services.site		Feb 5, 2020, 2:20:35 PM		8	
+domain	service-activity-checkup.site		Feb 5, 2020, 2:20:35 PM		7	
+domain	inztaqram.ga		Feb 5, 2020, 2:20:35 PM		8	
+domain	unirsd.com		Feb 5, 2020, 2:20:35 PM		8	
+domain	phonechallenges-submit.site		Feb 5, 2020, 2:20:35 PM		7	
+domain	acconut-verify.com		Feb 5, 2020, 2:20:35 PM		11	
+domain	finance-usbnc.info		Feb 5, 2020, 2:20:35 PM		8	
+FileHash-MD5	542128ab98bda5ea139b169200a50bce		Feb 5, 2020, 2:20:35 PM		3	
+FileHash-MD5	3d67ce57aab4f7f917cf87c724ed7dab		Feb 5, 2020, 2:20:35 PM		3	
+hostname	x09live-ix3b.account-profile-users.info		Feb 6, 2020, 2:56:07 PM		0	
+hostname	www.phonechallenges-submit.site		Feb 6, 2020, 2:56:07 PM
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[(&#39;ipv4&#39;, [&#39;1.2.3.4&#39;]),
+ (&#39;linux_path&#39;,
+  [&#39;//two-step-checkup.site/securemail/secureLogin/challenge/url?ucode=d50a3eb1-9a6b-45a8-8389-d5203bbddaa1&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;service=mailservice&amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;amp;type=password\t\tFeb&#39;,
+   &#39;/usr/localbzzzzzz.sh&#39;]),
+ (&#39;md5_hash&#39;,
+  [&#39;3d67ce57aab4f7f917cf87c724ed7dab&#39;, &#39;542128ab98bda5ea139b169200a50bce&#39;])]</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Pandas-Extension">Pandas Extension<a class="anchor-link" href="#Pandas-Extension"> </a></h2><p>The decoding functionality is also available in a pandas extension <code>mp_ioc</code>.
+This supports a single method <code>extract()</code>.</p>
+<p>This supports the same syntax
+as <code>extract</code> (described earlier).</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">process_tree</span><span class="o">.</span><span class="n">mp_ioc</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>IoCType</th>
+      <th>Observable</th>
+      <th>SourceIndex</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dns</td>
+      <td>microsoft.com</td>
+      <td>24</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>url</td>
+      <td>http://server/file.sct</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dns</td>
+      <td>server</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>dns</td>
+      <td>evil.ps</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>url</td>
+      <td>http://somedomain/best-kitten-names-1.jpg'</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>dns</td>
+      <td>somedomain</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>40</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>dns</td>
+      <td>blah.ps</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>md5_hash</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>41</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>md5_hash</td>
+      <td>81ed03caf6901e444c72ac67d192fb9c</td>
+      <td>44</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>url</td>
+      <td>http://badguyserver/pwnme</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>dns</td>
+      <td>badguyserver</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>url</td>
+      <td>http://badguyserver/pwnme</td>
+      <td>47</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>dns</td>
+      <td>badguyserver</td>
+      <td>47</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>dns</td>
+      <td>Invoke-Shellcode.ps</td>
+      <td>48</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>dns</td>
+      <td>Invoke-ReverseDnsLookup.ps</td>
+      <td>49</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>dns</td>
+      <td>Wscript.Shell</td>
+      <td>67</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>url</td>
+      <td>http://system.management.automation.amsiutils').getfield('amsiinitfailed','nonpublic,static').se...</td>
+      <td>77</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>dns</td>
+      <td>system.management.automation.amsiutils').getfield('amsiinitfailed','nonpublic,static').setvalue(...</td>
+      <td>77</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>ipv4</td>
+      <td>1.2.3.4</td>
+      <td>78</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>dns</td>
+      <td>wscript.shell</td>
+      <td>81</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>dns</td>
+      <td>abc.com</td>
+      <td>90</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>ipv4</td>
+      <td>127.0.0.1</td>
+      <td>102</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>url</td>
+      <td>http://127.0.0.1/</td>
+      <td>102</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>win_named_pipe</td>
+      <td>\\.\pipe\blahtest"</td>
+      <td>107</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+ 
+
+
+    </main>
+    

@@ -1,0 +1,1101 @@
+---
+redirect_from:
+  - "/notebooks/base64unpack"
+interact_link: content/notebooks/Base64Unpack.ipynb
+kernel_name: python3
+kernel_path: content/notebooks
+has_widgets: false
+title: |-
+  Title: msticpy - Base64 Decoder
+pagenum: 7
+prev_page:
+  url: /getting-started/JupyterAndAzureSentinel.html
+next_page:
+  url: /notebooks/Data_Queries.html
+suffix: .ipynb
+search: string dataframe decoded base input id decoding toc column contents utf file data output type href modified decode item span nested binary pandas strings zip magic items any encoded results tar lilispana archives sha byte archive class merge known index allows values e using notes extension additional list return title msticpy decoder description returns hashes printable gzip itemlispana li ul interpreting sourceindex ipython optional default replaced original srcindex row only columns following md g case also spanul str none show types unpack child depth note hash separate match pattern b supports print module extract content recursively decompressed after possible div
+
+comment: "***PROGRAMMATICALLY GENERATED, DO NOT EDIT. SEE ORIGINAL FILES IN /content***"
+---
+
+    <main class="jupyter-page">
+    <div id="page-info"><div id="page-title">Title: msticpy - Base64 Decoder</div>
+</div>
+    <div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Description:">Description:<a class="anchor-link" href="#Description:"> </a></h2><p>This module allows you to extract base64 encoded content from a string or columns of a Pandas DataFrame.
+The library returns the following information:</p>
+<ul>
+<li>decoded string (if decodable to utf-8 or utf-16)</li>
+<li>hashes of the decoded segment (MD5, SHA1, SHA256)</li>
+<li>string of printable byte values (e.g. for submission to a disassembler)</li>
+<li>the detected decoded file type (limited)</li>
+</ul>
+<p>If the results of the decoding contain further encoded strings these will be decoded recursively. If the encoded string appears to be a zip, gzip or tar archive, the contents will be decompressed after decoding. In the case of zip and tar, the contents of the archive will also be checked for base64 encoded content and decoded/decompressed if possible.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><h1>Table of Contents<span class="tocSkip"></span></h1></p>
+<div class="toc"><ul class="toc-item"><li><span><a href="#Title:-msticpy---Base64-Decoder" data-toc-modified-id="Title:-msticpy---Base64-Decoder-1">Title: msticpy - Base64 Decoder</a></span><ul class="toc-item"><li><span><a href="#Description:" data-toc-modified-id="Description:-1.1">Description:</a></span></li><li><span><a href="#Decoding-Base64-String" data-toc-modified-id="Decoding-Base64-String-1.2">Decoding Base64 String</a></span></li><li><span><a href="#Using-a-DataFrame-as-Input" data-toc-modified-id="Using-a-DataFrame-as-Input-1.3">Using a DataFrame as Input</a></span><ul class="toc-item"><li><span><a href="#Notes" data-toc-modified-id="Notes-1.3.1">Notes</a></span></li></ul></li><li><span><a href="#Interpreting-the-DataFrame-output." data-toc-modified-id="Interpreting-the-DataFrame-output.-1.4">Interpreting the DataFrame output.</a></span><ul class="toc-item"><li><span><a href="#SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame" data-toc-modified-id="SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame-1.4.1">SourceIndex column allows you to merge the results with the input DataFrame</a></span></li></ul></li><li><span><a href="#Decoding-Nested-Base64/Archives" data-toc-modified-id="Decoding-Nested-Base64/Archives-1.5">Decoding Nested Base64/Archives</a></span></li><li><span><a href="#IPython-magic" data-toc-modified-id="IPython-magic-1.6">IPython magic</a></span></li><li><span><a href="#Pandas-Extension" data-toc-modified-id="Pandas-Extension-1.7">Pandas Extension</a></span></li><li><span><a href="#To-Do-Items" data-toc-modified-id="To-Do-Items-1.8">To-Do Items</a></span></li></ul></li></ul></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Imports</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">MIN_REQ_PYTHON</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&lt;</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Check the Kernel-&gt;Change Kernel menu and ensure that Python 3.6&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;or later is selected as the active kernel.&#39;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Python </span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2"> or later is required.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">MIN_REQ_PYTHON</span><span class="p">)</span>
+
+
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># Import Base64 module</span>
+<span class="kn">from</span> <span class="nn">msticpy.nbtools</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">msticpy.sectools</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>mpmagics
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Load test data</span>
+<span class="n">process_tree</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;data/process_tree.csv&#39;</span><span class="p">,</span>
+                           <span class="n">parse_dates</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;TimeGenerated&quot;</span><span class="p">],</span>
+                           <span class="n">infer_datetime_format</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">process_tree</span><span class="p">[[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CommandLine</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>.\ftp  -s:C:\RECYCLER\xxppyy.exe</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>.\reg  not /domain:everything that /sid:shines...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>cmd  /c "systeminfo &amp;&amp; systeminfo"</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>.\rundll32  /C 12345.exe</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>.\rundll32  /C c:\users\MSTICAdmin\12345.exe</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='decoding_string'></a><a href="#contents">Contents</a></p>
+<h2 id="Decoding-Base64-String">Decoding Base64 String<a class="anchor-link" href="#Decoding-Base64-String"> </a></h2><p>Base64 decode an input string.</p>
+
+<pre><code>    Base64 decode an input string.
+
+    Parameters
+    ----------
+    input_string : str, optional
+        single string to decode (the default is None)
+    trace : bool, optional
+        Show additional status (the default is None)
+
+    Returns
+    -------
+    Tuple[str, Optional[List[BinaryRecord]]]
+        Decoded string and additional metadata
+
+    Notes
+    -----
+    Items that decode to utf-8 or utf-16 strings will be returned as decoded
+    strings replaced in the original string. If the encoded string is a
+    known binary type it will identify the file type and return the hashes
+    of the file. If any binary types are known archives (zip, tar, gzip) it
+    will unpack the contents of the archive.
+    For any binary it will return the decoded file as a byte array, and as a
+    printable list of byte values. If the input is a string the function
+    returns:
+
+    - decoded string: this is the input string with any decoded sections
+      replaced by the results of the decoding</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># get a commandline from our data set</span>
+<span class="n">cmdline</span> <span class="o">=</span> <span class="n">process_tree</span><span class="p">[</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">39</span><span class="p">]</span>
+<span class="n">cmdline</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39;.\\powershell  -enc JAB0ACAAPQAgACcAZABpAHIAJwA7AA0ACgAmACAAKAAnAEkAbgB2AG8AawBlACcAKwAnAC0ARQB4AHAAcgBlAHMAcwBpAG8AbgAnACkAIAAkAHQA&#39;</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Decode the string</span>
+<span class="n">base64_dec_str</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">input_string</span><span class="o">=</span><span class="n">cmdline</span><span class="p">)</span>
+
+<span class="c1"># Print decoded string</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">base64_dec_str</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>(&#34;.\\powershell  -enc &lt;decoded type=&#39;string&#39; name=&#39;[None]&#39; index=&#39;1&#39; depth=&#39;1&#39;&gt;$\x00t\x00 \x00=\x00 \x00&#39;\x00d\x00i\x00r\x00&#39;\x00;\x00\r\x00\n\x00&amp;\x00 \x00(\x00&#39;\x00I\x00n\x00v\x00o\x00k\x00e\x00&#39;\x00+\x00&#39;\x00-\x00E\x00x\x00p\x00r\x00e\x00s\x00s\x00i\x00o\x00n\x00&#39;\x00)\x00 \x00$\x00t\x00&lt;/decoded&gt;&#34;,    reference                                    original_string file_name  \
+0  (, 1., 1)  JAB0ACAAPQAgACcAZABpAHIAJwA7AA0ACgAmACAAKAAnAE...   unknown   
+
+  file_type                                        input_bytes  \
+0      None  b&#34;$\x00t\x00 \x00=\x00 \x00&#39;\x00d\x00i\x00r\x0...   
+
+                                      decoded_string encoding_type  \
+0  $ t   =   &#39; d i r &#39; ; \r \n &amp;   ( &#39; I n v o k ...         utf-8   
+
+                                         file_hashes  \
+0  {&#39;md5&#39;: &#39;6cd1486db221e532cc2011c9beeb4ffc&#39;, &#39;s...   
+
+                                md5                                      sha1  \
+0  6cd1486db221e532cc2011c9beeb4ffc  6e485467d7e06502046b7c84a8ef067cfe1512ad   
+
+                                              sha256  \
+0  d3291dab1ae552b91e6b50d7460ceaa39f6f92b2cda433...   
+
+                                     printable_bytes  
+0  24 00 74 00 20 00 3d 00 20 00 27 00 64 00 69 0...  )
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='dataframeinput'></a><a href="#toc">Contents</a></p>
+<h2 id="Using-a-DataFrame-as-Input">Using a DataFrame as Input<a class="anchor-link" href="#Using-a-DataFrame-as-Input"> </a></h2><p>You can replace to base64.unpack_df() to pass a DataFrame as an argument.
+Use the <code>column</code> parameter to specify which column to process.</p>
+<p>In the case of DataFrame input, the output DataFrame contains these additional columns:</p>
+<ul>
+<li>src_index - the index of the row in the input dataframe from which the data came.</li>
+<li>full_decoded_string - the full decoded string with any decoded replacements. This is only really useful for top-level items, since nested items will only show the 'full' string representing the child fragment.</li>
+</ul>
+
+<pre><code>Base64 decode strings taken from a pandas dataframe.
+
+Parameters
+----------
+data : pd.DataFrame
+    dataframe containing column to decode
+column : str
+    Name of dataframe text column
+trace : bool, optional
+    Show additional status (the default is None)
+
+Returns
+-------
+pd.DataFrame
+    Decoded string and additional metadata in dataframe</code></pre>
+<h3 id="Notes">Notes<a class="anchor-link" href="#Notes"> </a></h3><p>Items that decode to utf-8 or utf-16 strings will be returned as decoded
+strings replaced in the original string. If the encoded string is a
+known binary type it will identify the file type and return the hashes
+of the file. If any binary types are known archives (zip, tar, gzip) it
+will unpack the contents of the archive.
+For any binary it will return the decoded file as a byte array, and as a
+printable list of byte values.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># specify the data and column parameters</span>
+<span class="n">dec_df</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">unpack_df</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">process_tree</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">)</span>
+<span class="n">dec_df</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>reference</th>
+      <th>original_string</th>
+      <th>file_name</th>
+      <th>file_type</th>
+      <th>input_bytes</th>
+      <th>decoded_string</th>
+      <th>encoding_type</th>
+      <th>file_hashes</th>
+      <th>md5</th>
+      <th>sha1</th>
+      <th>sha256</th>
+      <th>printable_bytes</th>
+      <th>src_index</th>
+      <th>full_decoded_string</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>(, 1., 1)</td>
+      <td>JAB0ACAAPQAgACcAZABpAHIAJwA7AA0ACgAmACAAKAAnAE...</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b"$\x00t\x00 \x00=\x00 \x00'\x00d\x00i\x00r\x0...</td>
+      <td>$ t   =   ' d i r ' ; \r \n &amp;   ( ' I n v o k ...</td>
+      <td>utf-8</td>
+      <td>{'md5': '6cd1486db221e532cc2011c9beeb4ffc', 's...</td>
+      <td>6cd1486db221e532cc2011c9beeb4ffc</td>
+      <td>6e485467d7e06502046b7c84a8ef067cfe1512ad</td>
+      <td>d3291dab1ae552b91e6b50d7460ceaa39f6f92b2cda433...</td>
+      <td>24 00 74 00 20 00 3d 00 20 00 27 00 64 00 69 0...</td>
+      <td>39</td>
+      <td>.\powershell  -enc &lt;decoded type='string' name...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>(, 1., 1)</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>40</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>(, 1., 1)</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>41</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>(, 1., 1)</td>
+      <td>81ed03caf6901e444c72ac67d192fb9c</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'\xf3W\x9d\xd3w\x1a\x7f\xaft\xd5\xee8\xe1\xce...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '1c8cc6299bd654bbcd85710968d6a87c', 's...</td>
+      <td>1c8cc6299bd654bbcd85710968d6a87c</td>
+      <td>55377391141f59a2ff5ae4765d9f0b4438adfd73</td>
+      <td>fd80ceba7cfb49d296886c10d9a3497d63c89a589587cd...</td>
+      <td>f3 57 9d d3 77 1a 7f af 74 d5 ee 38 e1 ce f6 6...</td>
+      <td>44</td>
+      <td>implant.exe  &lt;decoded value='binary'  name='[N...</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='dataframe_colums'></a><a href="#contents">Contents</a></p>
+<h2 id="Interpreting-the-DataFrame-output.">Interpreting the DataFrame output.<a class="anchor-link" href="#Interpreting-the-DataFrame-output."> </a></h2><p>For simple strings the Base64 decoded output is straightforward. However for nested encodings this can get a little complex and difficult to represent in a tabular format.</p>
+<p><strong>Columns</strong></p>
+<ul>
+<li>reference - The index of the row item in dotted notation in depth.seq pairs (e.g. 1.2.2.3 would be the 3 item at depth 3 that is a child of the 2nd item found at depth 1). This may not always be an accurate notation - it is mainly use to allow you to associate an individual row with the reference value contained in the full_decoded_string column of the topmost item).</li>
+<li>original_string - the original string before decoding.</li>
+<li>file_name - filename, if any (only if this is an item in zip or tar file).</li>
+<li>file_type - a guess at the file type (this is currently elementary and only includes a few file types).</li>
+<li>input_bytes - the decoded bytes as a Python bytes string.</li>
+<li>decoded_string - the decoded string if it can be decoded as a UTF-8 or UTF-16 string. Note: binary sequences may often successfully decode as UTF-16 strings but, in these cases, the decodings are meaningless.</li>
+<li>encoding_type - encoding type (UTF-8 or UTF-16) if a decoding was possible, otherwise 'binary'.</li>
+<li>file_hashes - collection of file hashes for any decoded item.</li>
+<li>md5 - md5 hash as a separate column.</li>
+<li>sha1 - sha1 hash as a separate column.</li>
+<li>sha256 - sha256 hash as a separate column.</li>
+<li>printable_bytes - printable version of input_bytes as a string of \xNN values</li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='mergeresults'></a><a href="#contents">Contents</a></p>
+<h3 id="SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame">SourceIndex column allows you to merge the results with the input DataFrame<a class="anchor-link" href="#SourceIndex-column-allows-you-to-merge-the-results-with-the-input-DataFrame"> </a></h3><p>Where an input row has multiple decoded elements (e.g. a nested encoding or a zip or other archive file), the output of this merge will result in duplicate rows from the input (one per element match). The DataFrame index from the source is preserved in the <code>src_index</code> column.</p>
+<p>Note: you may need to force the type of the <code>src_index</code> column to be the same type as the original DataFrame in order to merge. In the example below case we are matching with the default numeric index so we force the type to be numeric. In cases where you are using an index of a different dtype you will need to convert the <code>src_index</code> (dtype=object) to match the type of your index column.</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Set the type of the SourceIndex column. </span>
+<span class="n">dec_df</span><span class="p">[</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">dec_df</span><span class="p">[</span><span class="s1">&#39;src_index&#39;</span><span class="p">])</span>
+<span class="n">merged_df</span> <span class="o">=</span> <span class="p">(</span><span class="n">process_tree</span>
+             <span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">right</span><span class="o">=</span><span class="n">dec_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">)</span>
+             <span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Unnamed: 0&#39;</span><span class="p">])</span>
+             <span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;SourceIndex&#39;</span><span class="p">))</span>
+
+<span class="c1"># Show the result of the merge (only those rows that have a value in original_string)</span>
+<span class="n">merged_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;original_string&#39;</span><span class="p">])</span>
+
+<span class="c1"># Note the output of unpack_items() may have multiple rows (for nested encodings) </span>
+<span class="c1"># In this case merged DF will have duplicate rows from the source.</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>TenantId</th>
+      <th>Account</th>
+      <th>EventID</th>
+      <th>TimeGenerated</th>
+      <th>Computer</th>
+      <th>SubjectUserSid</th>
+      <th>SubjectUserName</th>
+      <th>SubjectDomainName</th>
+      <th>SubjectLogonId</th>
+      <th>NewProcessId</th>
+      <th>...</th>
+      <th>input_bytes</th>
+      <th>decoded_string</th>
+      <th>encoding_type</th>
+      <th>file_hashes</th>
+      <th>md5</th>
+      <th>sha1</th>
+      <th>sha256</th>
+      <th>printable_bytes</th>
+      <th>src_index</th>
+      <th>full_decoded_string</th>
+    </tr>
+    <tr>
+      <th>SourceIndex</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>39</th>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:13.567</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x1684</td>
+      <td>...</td>
+      <td>b"$\x00t\x00 \x00=\x00 \x00'\x00d\x00i\x00r\x0...</td>
+      <td>$ t   =   ' d i r ' ; \r \n &amp;   ( ' I n v o k ...</td>
+      <td>utf-8</td>
+      <td>{'md5': '6cd1486db221e532cc2011c9beeb4ffc', 's...</td>
+      <td>6cd1486db221e532cc2011c9beeb4ffc</td>
+      <td>6e485467d7e06502046b7c84a8ef067cfe1512ad</td>
+      <td>d3291dab1ae552b91e6b50d7460ceaa39f6f92b2cda433...</td>
+      <td>24 00 74 00 20 00 3d 00 20 00 27 00 64 00 69 0...</td>
+      <td>39.0</td>
+      <td>.\powershell  -enc &lt;decoded type='string' name...</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:13.683</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x16b8</td>
+      <td>...</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>40.0</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:13.793</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x16ec</td>
+      <td>...</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>41.0</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>802d39e1-9d70-404d-832c-2de5e2478eda</td>
+      <td>MSTICAlertsWin1\MSTICAdmin</td>
+      <td>4688</td>
+      <td>2019-01-15 05:15:12.003</td>
+      <td>MSTICAlertsWin1</td>
+      <td>S-1-5-21-996632719-2361334927-4038480536-500</td>
+      <td>MSTICAdmin</td>
+      <td>MSTICAlertsWin1</td>
+      <td>0xfaac27</td>
+      <td>0x1250</td>
+      <td>...</td>
+      <td>b'\xf3W\x9d\xd3w\x1a\x7f\xaft\xd5\xee8\xe1\xce...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '1c8cc6299bd654bbcd85710968d6a87c', 's...</td>
+      <td>1c8cc6299bd654bbcd85710968d6a87c</td>
+      <td>55377391141f59a2ff5ae4765d9f0b4438adfd73</td>
+      <td>fd80ceba7cfb49d296886c10d9a3497d63c89a589587cd...</td>
+      <td>f3 57 9d d3 77 1a 7f af 74 d5 ee 38 e1 ce f6 6...</td>
+      <td>44.0</td>
+      <td>implant.exe  &lt;decoded value='binary'  name='[N...</td>
+    </tr>
+  </tbody>
+</table>
+<p>4 rows × 36 columns</p>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='nested_encodings'></a><a href="#contents">Contents</a></p>
+<h2 id="Decoding-Nested-Base64/Archives">Decoding Nested Base64/Archives<a class="anchor-link" href="#Decoding-Nested-Base64/Archives"> </a></h2><p>The module will try to follow nested encodings. It uses the following algorithm:</p>
+<ol>
+<li>Search for a pattern in the input that looks like a Base64 encoded string</li>
+<li>If not a known undecodable_string, try to decode the matched pattern.<ul>
+<li>If the base 64 string matches a known archive type (zip, tar, gzip) also decompress or unpack<ul>
+<li>For multi-item archives (zip, tar) process each contained item recursively (i.e. go to item 1. with 
+child item as input)</li>
+</ul>
+</li>
+<li>For anything that decodes to a UTF-8 or UTF-16 string replace the input pattern with the decoded string</li>
+<li>Recurse over resultant output (i.e. submit decoded/replaced string to 1.)</li>
+</ul>
+</li>
+<li>If decoding fails, add to list of undecodable_strings (prevents infinite looping over something that looks like a base64 string but isn't)</li>
+</ol>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">encoded_cmd</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">powershell.exe  -nop -w hidden -encodedcommand </span>
+<span class="s1">UEsDBBQAAAAIAGBXkk3LfdszdwAAAIoAAAAJAAAAUGVEbGwuZGxss6v+sj/A0diA</span>
+<span class="s1">UXmufa/PFcYNcRwX7I/wMC4oZAjgUJyzTEgqrdHbfuWyy/OCExqUGJkZGBoYoEDi</span>
+<span class="s1">QPO3P4wJuqsQgGvVKimphoUIIa1Fgr9OMLyoZ0z4y37gP2vDfxDp8J/RjWEzs4NG</span>
+<span class="s1">+8TMMoYTCouZGRSShAFQSwMEFAAAAAAAYYJrThx8YzUhAAAAIQAAAAwAAABiNjRp</span>
+<span class="s1">bnppcC5mb29CYXNlNjQgZW5jb2RlZCBzdHJpbmcgaW4gemlwIGZpbGVQSwMEFAAA</span>
+<span class="s1">AAAAi4JrTvMfsJUaAAAAGgAAABIAAABQbGFpblRleHRJblppcC5kbGxVbmVuY29k</span>
+<span class="s1">ZWQgdGV4dCBmaWxlIGluIHppcFBLAQIUABQAAAAIAGBXkk3LfdszdwAAAIoAAAAJ</span>
+<span class="s1">AAAAAAAAAAAAIAAAAAAAAABQZURsbC5kbGxQSwECFAAUAAAAAABhgmtOHHxjNSEA</span>
+<span class="s1">AAAhAAAADAAAAAAAAAABACAAAACeAAAAYjY0aW56aXAuZm9vUEsBAhQAFAAAAAAA</span>
+<span class="s1">i4JrTvMfsJUaAAAAGgAAABIAAAAAAAAAAQAgAAAA6QAAAFBsYWluVGV4dEluWmlw</span>
+<span class="s1">LmRsbFBLBQYAAAAAAwADALEAAAAzAQAAAAA=&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="n">dec_string</span><span class="p">,</span> <span class="n">dec_df</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">input_string</span><span class="o">=</span><span class="n">encoded_cmd</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">dec_string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&lt;decoded&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&lt;decoded&#39;</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+powershell.exe  -nop -w hidden -encodedcommand 
+&lt;decoded value=&#39;multiple binary&#39; type=&#39;multiple&#39; index=&#39;1&#39; depth=&#39;1&#39;&gt;
+&lt;decoded value=&#39;binary&#39;  name=&#39;[zip] Filename: PeDll.dll&#39; type=&#39;zip&#39; index=&#39;1.1&#39; depth=&#39;2&#39;&gt;3e 7b f4 bf 50 41 33 30 01 23 9d 3f 8d 4c d4 01 b0 5e 08 d0 3f c4 0c 01 a0 71 00 50 08 21 9c a6 12 1a 66 81 4b 3f a9 a6 d3 9e 53 60 80 22 01 03 00 00 80 00 00 00 00 00 00 00 00 18 c0 83 f6 fc 01 60 2d aa aa aa aa aa aa aa aa aa aa aa 0a aa aa 1a 1a 80 a1 2d aa aa aa aa aa aa aa aa aa 2a a2 11 fa c8 00 e8 7f 01 60 fd 07 c0 ff 05 80 ff 07 c0 ff 05 40 ff 01 46 00 b3 03 40 28 87 91 69 76 00 c8 20 a3 03 00 20 62 13&lt;/decoded&gt;
+&lt;decoded type=&#39;string&#39; name=&#39;[zip] Filename: b64inzip.foo&#39; index=&#39;1.2&#39; depth=&#39;2&#39;&gt;Base64 encoded string in zip file&lt;/decoded&gt;
+&lt;decoded type=&#39;string&#39; name=&#39;[zip] Filename: PlainTextInZip.dll&#39; index=&#39;1.3&#39; depth=&#39;2&#39;&gt;Unencoded text file in zip&lt;/decoded&gt;&lt;/decoded&gt;
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="IPython-magic">IPython magic<a class="anchor-link" href="#IPython-magic"> </a></h2><p>You can use the line magic <code>%b64</code> or cell magic <code>%%b64</code> to decode text directly in a cell</p>
+<p>The b64 magic supports the following options:</p>
+
+<pre><code>--out OUT, -o OUT  The variable to return the results in the variable `OUT`
+                   Note: the output is a tuple of decoded string and pandas DataFrame
+--pretty, -p       Print formatted version of output (if you `print` the output)
+--clean, -c        Print decoded string with no formatting</code></pre>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">b64</span> --pretty --out dec_xml
+powershell.exe  -nop -w hidden -encodedcommand 
+UEsDBBQAAAAIAGBXkk3LfdszdwAAAIoAAAAJAAAAUGVEbGwuZGxss6v+sj/A0diA
+UXmufa/PFcYNcRwX7I/wMC4oZAjgUJyzTEgqrdHbfuWyy/OCExqUGJkZGBoYoEDi
+QPO3P4wJuqsQgGvVKimphoUIIa1Fgr9OMLyoZ0z4y37gP2vDfxDp8J/RjWEzs4NG
++8TMMoYTCouZGRSShAFQSwMEFAAAAAAAYYJrThx8YzUhAAAAIQAAAAwAAABiNjRp
+bnppcC5mb29CYXNlNjQgZW5jb2RlZCBzdHJpbmcgaW4gemlwIGZpbGVQSwMEFAAA
+AAAAi4JrTvMfsJUaAAAAGgAAABIAAABQbGFpblRleHRJblppcC5kbGxVbmVuY29k
+ZWQgdGV4dCBmaWxlIGluIHppcFBLAQIUABQAAAAIAGBXkk3LfdszdwAAAIoAAAAJ
+AAAAAAAAAAAAIAAAAAAAAABQZURsbC5kbGxQSwECFAAUAAAAAABhgmtOHHxjNSEA
+AAAhAAAADAAAAAAAAAABACAAAACeAAAAYjY0aW56aXAuZm9vUEsBAhQAFAAAAAAA
+i4JrTvMfsJUaAAAAGgAAABIAAAAAAAAAAQAgAAAA6QAAAFBsYWluVGV4dEluWmlw
+LmRsbFBLBQYAAAAAAwADALEAAAAzAQAAAAA=
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&#39;&lt;?xml version=&#34;1.0&#34; encoding=&#34;utf-8&#34;?&gt;\n&lt;decoded_string&gt;\n powershell.exe  -nop -w hidden -encodedcommand\n &lt;decoded depth=&#34;1&#34; index=&#34;1&#34; type=&#34;multiple&#34; value=&#34;multiple binary&#34;&gt;\n  &lt;decoded depth=&#34;2&#34; index=&#34;1.1&#34; name=&#34;[zip] Filename: PeDll.dll&#34; type=&#34;zip&#34; value=&#34;binary&#34;&gt;\n   3e 7b f4 bf 50 41 33 30 01 23 9d 3f 8d 4c d4 01 b0 5e 08 d0 3f c4 0c 01 a0 71 00 50 08 21 9c a6 12 1a 66 81 4b 3f a9 a6 d3 9e 53 60 80 22 01 03 00 00 80 00 00 00 00 00 00 00 00 18 c0 83 f6 fc 01 60 2d aa aa aa aa aa aa aa aa aa aa aa 0a aa aa 1a 1a 80 a1 2d aa aa aa aa aa aa aa aa aa 2a a2 11 fa c8 00 e8 7f 01 60 fd 07 c0 ff 05 80 ff 07 c0 ff 05 40 ff 01 46 00 b3 03 40 28 87 91 69 76 00 c8 20 a3 03 00 20 62 13\n  &lt;/decoded&gt;\n  &lt;decoded depth=&#34;2&#34; index=&#34;1.2&#34; name=&#34;[zip] Filename: b64inzip.foo&#34; type=&#34;string&#34;&gt;\n   Base64 encoded string in zip file\n  &lt;/decoded&gt;\n  &lt;decoded depth=&#34;2&#34; index=&#34;1.3&#34; name=&#34;[zip] Filename: PlainTextInZip.dll&#34; type=&#34;string&#34;&gt;\n   Unencoded text file in zip\n  &lt;/decoded&gt;\n &lt;/decoded&gt;\n&lt;/decoded_string&gt;&#39;</pre>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">dec_xml</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>&lt;?xml version=&#34;1.0&#34; encoding=&#34;utf-8&#34;?&gt;
+&lt;decoded_string&gt;
+ powershell.exe  -nop -w hidden -encodedcommand
+ &lt;decoded depth=&#34;1&#34; index=&#34;1&#34; type=&#34;multiple&#34; value=&#34;multiple binary&#34;&gt;
+  &lt;decoded depth=&#34;2&#34; index=&#34;1.1&#34; name=&#34;[zip] Filename: PeDll.dll&#34; type=&#34;zip&#34; value=&#34;binary&#34;&gt;
+   3e 7b f4 bf 50 41 33 30 01 23 9d 3f 8d 4c d4 01 b0 5e 08 d0 3f c4 0c 01 a0 71 00 50 08 21 9c a6 12 1a 66 81 4b 3f a9 a6 d3 9e 53 60 80 22 01 03 00 00 80 00 00 00 00 00 00 00 00 18 c0 83 f6 fc 01 60 2d aa aa aa aa aa aa aa aa aa aa aa 0a aa aa 1a 1a 80 a1 2d aa aa aa aa aa aa aa aa aa 2a a2 11 fa c8 00 e8 7f 01 60 fd 07 c0 ff 05 80 ff 07 c0 ff 05 40 ff 01 46 00 b3 03 40 28 87 91 69 76 00 c8 20 a3 03 00 20 62 13
+  &lt;/decoded&gt;
+  &lt;decoded depth=&#34;2&#34; index=&#34;1.2&#34; name=&#34;[zip] Filename: b64inzip.foo&#34; type=&#34;string&#34;&gt;
+   Base64 encoded string in zip file
+  &lt;/decoded&gt;
+  &lt;decoded depth=&#34;2&#34; index=&#34;1.3&#34; name=&#34;[zip] Filename: PlainTextInZip.dll&#34; type=&#34;string&#34;&gt;
+   Unencoded text file in zip
+  &lt;/decoded&gt;
+ &lt;/decoded&gt;
+&lt;/decoded_string&gt;
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Pandas-Extension">Pandas Extension<a class="anchor-link" href="#Pandas-Extension"> </a></h2><p>The decoding functionality is also available in a pandas extension <code>mp_b64</code>.
+This supports a single method <code>extract()</code>.</p>
+<p>This supports the same syntax
+as <code>unpack_df</code> (described earlier).</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">process_tree</span><span class="o">.</span><span class="n">mp_b64</span><span class="o">.</span><span class="n">extract</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">&#39;CommandLine&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="jb_output_wrapper }}">
+<div class="output_area">
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>reference</th>
+      <th>original_string</th>
+      <th>file_name</th>
+      <th>file_type</th>
+      <th>input_bytes</th>
+      <th>decoded_string</th>
+      <th>encoding_type</th>
+      <th>file_hashes</th>
+      <th>md5</th>
+      <th>sha1</th>
+      <th>sha256</th>
+      <th>printable_bytes</th>
+      <th>src_index</th>
+      <th>full_decoded_string</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>(, 1., 1)</td>
+      <td>JAB0ACAAPQAgACcAZABpAHIAJwA7AA0ACgAmACAAKAAnAE...</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b"$\x00t\x00 \x00=\x00 \x00'\x00d\x00i\x00r\x0...</td>
+      <td>$ t   =   ' d i r ' ; \r \n &amp;   ( ' I n v o k ...</td>
+      <td>utf-8</td>
+      <td>{'md5': '6cd1486db221e532cc2011c9beeb4ffc', 's...</td>
+      <td>6cd1486db221e532cc2011c9beeb4ffc</td>
+      <td>6e485467d7e06502046b7c84a8ef067cfe1512ad</td>
+      <td>d3291dab1ae552b91e6b50d7460ceaa39f6f92b2cda433...</td>
+      <td>24 00 74 00 20 00 3d 00 20 00 27 00 64 00 69 0...</td>
+      <td>39</td>
+      <td>.\powershell  -enc &lt;decoded type='string' name...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>(, 1., 1)</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>40</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>(, 1., 1)</td>
+      <td>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'i\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9ai\xa6\x9...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '9a45b2520e930dc9186f6d93a7798a13', 's...</td>
+      <td>9a45b2520e930dc9186f6d93a7798a13</td>
+      <td>f526c90fa0744e3a63d84421ff25e3f5a3d697cb</td>
+      <td>c1f6c05bdbe28a58557a9477cd0fa96fbc5e7c54ceb605...</td>
+      <td>69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 69 a6 9a 6...</td>
+      <td>41</td>
+      <td>cmd  /c "echo # &lt;decoded value='binary'  name=...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>(, 1., 1)</td>
+      <td>81ed03caf6901e444c72ac67d192fb9c</td>
+      <td>unknown</td>
+      <td>None</td>
+      <td>b'\xf3W\x9d\xd3w\x1a\x7f\xaft\xd5\xee8\xe1\xce...</td>
+      <td>None</td>
+      <td>binary</td>
+      <td>{'md5': '1c8cc6299bd654bbcd85710968d6a87c', 's...</td>
+      <td>1c8cc6299bd654bbcd85710968d6a87c</td>
+      <td>55377391141f59a2ff5ae4765d9f0b4438adfd73</td>
+      <td>fd80ceba7cfb49d296886c10d9a3497d63c89a589587cd...</td>
+      <td>f3 57 9d d3 77 1a 7f af 74 d5 ee 38 e1 ce f6 6...</td>
+      <td>44</td>
+      <td>implant.exe  &lt;decoded value='binary'  name='[N...</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="jb_cell">
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><a id='todos'></a><a href="#contents">Contents</a></p>
+<h2 id="To-Do-Items">To-Do Items<a class="anchor-link" href="#To-Do-Items"> </a></h2><ul>
+<li>Use more comprehensive list of binary magic numbers and match on byte values after decoding to get better file typing</li>
+<li>Output nested decodings in a more readable output</li>
+</ul>
+
+</div>
+</div>
+</div>
+</div>
+
+ 
+
+
+    </main>
+    
