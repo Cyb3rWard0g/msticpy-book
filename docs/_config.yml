@@ -18,7 +18,7 @@
 # Jekyll site settings
 title: MSTICPY Book
 author: Roberto Rodriguez
-email: choldgraf@berkeley.edu
+#email: 
 description: >-
   Jupyter Book implementation of MSTICPY Docs.
 
